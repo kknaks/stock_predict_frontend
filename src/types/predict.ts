@@ -26,4 +26,27 @@ export interface PredictionItem {
   actual_max_return: number | null;
   max_return_diff: number | null;
   direction_correct: number | null;
+  current_price: number | null;
+}
+
+export interface StrategyInfo {
+  id: number;
+  name: string;
+  description: string | null;
+}
+
+export interface StrategyPrediction {
+  strategy_info: StrategyInfo;
+  predictions: PredictionItem[];
+}
+
+export interface PredictListResponse {
+  is_market_open: boolean;
+  data: StrategyPrediction[];
+}
+
+export interface PriceUpdate {
+  stock_code: string;
+  current_price: number;
+  timestamp: string;
 }

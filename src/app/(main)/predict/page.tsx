@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { predictService } from "@/services/predict";
-import { PredictionItem } from "@/types/predict";
+import { priceSSEService } from "@/services/price";
+import { StrategyPrediction, PredictionItem, PriceUpdate } from "@/types/predict";
 
 export default function PredictPage() {
-  const [predictions, setPredictions] = useState<PredictionItem[]>([]);
+  const [strategies, setStrategies] = useState<StrategyPrediction[]>([]);
+  const [activeTab, setActiveTab] = useState<number | null>(null);
+  const [isMarketOpen, setIsMarketOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [date, setDate] = useState(() => {
@@ -13,12 +16,29 @@ export default function PredictPage() {
     return today.toISOString().split("T")[0];
   });
 
+  const handlePriceUpdate = useCallback((update: PriceUpdate) => {
+    setStrategies((prev) =>
+      prev.map((strategy) => ({
+        ...strategy,
+        predictions: strategy.predictions.map((item) =>
+          item.stock_code === update.stock_code
+            ? { ...item, current_price: update.current_price }
+            : item
+        ),
+      }))
+    );
+  }, []);
+
   const fetchPredictions = async () => {
     setLoading(true);
     setError("");
     try {
-      const data = await predictService.getList(date);
-      setPredictions(data);
+      const response = await predictService.getList(date);
+      setStrategies(response.data);
+      setIsMarketOpen(response.is_market_open);
+      if (response.data.length > 0) {
+        setActiveTab(response.data[0].strategy_info.id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "데이터 로딩 실패");
     } finally {
@@ -30,43 +50,114 @@ export default function PredictPage() {
     fetchPredictions();
   }, [date]);
 
-  const getSignalColor = (signal: string) => {
-    switch (signal) {
-      case "BUY":
-        return "bg-red-100 text-red-700";
-      case "SELL":
-        return "bg-blue-100 text-blue-700";
-      default:
-        return "bg-gray-100 text-gray-700";
+  // SSE 연결 관리
+  useEffect(() => {
+    if (!isMarketOpen || strategies.length === 0) {
+      priceSSEService.disconnect();
+      return;
     }
+
+    // 모든 종목 코드 수집
+    const stockCodes = strategies.flatMap((strategy) =>
+      strategy.predictions.map((item) => item.stock_code)
+    );
+    const uniqueCodes = [...new Set(stockCodes)];
+
+    if (uniqueCodes.length > 0) {
+      priceSSEService.connect(uniqueCodes, handlePriceUpdate);
+    }
+
+    return () => {
+      priceSSEService.disconnect();
+    };
+  }, [isMarketOpen, strategies.length, handlePriceUpdate]);
+
+  const formatPrice = (value: number | null) => {
+    if (value === null) return "-";
+    return value.toLocaleString();
   };
 
-  const getConfidenceColor = (confidence: string | null) => {
-    switch (confidence) {
-      case "HIGH":
-        return "text-green-600";
-      case "MEDIUM":
-        return "text-yellow-600";
-      case "LOW":
-        return "text-red-600";
-      default:
-        return "text-gray-500";
-    }
-  };
-
-  const formatPercent = (value: number) => {
+  const formatPercent = (value: number | null) => {
+    if (value === null) return "-";
     const sign = value >= 0 ? "+" : "";
     return `${sign}${value.toFixed(2)}%`;
   };
 
-  const formatProb = (value: number) => {
-    return `${(value * 100).toFixed(1)}%`;
+  const getReturnColor = (value: number | null) => {
+    if (value === null) return "text-gray-500";
+    return value >= 0 ? "text-red-500" : "text-blue-500";
+  };
+
+  const calculateReturn = (item: PredictionItem) => {
+    // 현재가가 있으면 시가 대비 수익률 계산
+    if (item.current_price && item.stock_open > 0) {
+      return ((item.current_price - item.stock_open) / item.stock_open) * 100;
+    }
+    // 실제 수익률이 있으면 사용
+    if (item.actual_return !== null) {
+      return item.actual_return;
+    }
+    // 기대 수익률 사용
+    return item.expected_return;
+  };
+
+  const renderPredictionItem = (item: PredictionItem) => {
+    const currentReturn = calculateReturn(item);
+    const isUp = currentReturn >= 0;
+    const displayPrice = item.current_price ?? item.stock_open;
+
+    return (
+      <div
+        key={item.id}
+        className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+      >
+        {/* 1행: 종목 | 현재가 | 시작가 | 등락률 */}
+        <div className="flex items-center">
+          <div className="flex-1 min-w-0">
+            <span className="font-bold text-base truncate">{item.stock_name}</span>
+          </div>
+          <div className={`w-24 flex items-center justify-end font-bold ${getReturnColor(currentReturn)}`}>
+            <span>{formatPrice(displayPrice)}</span>
+            <span className="ml-0.5 text-[10px]">{isUp ? "▲" : "▼"}</span>
+          </div>
+          <div className="w-24 text-right text-gray-600 dark:text-gray-400">
+            {formatPrice(item.stock_open)}
+          </div>
+          <div className={`w-20 text-right font-bold ${getReturnColor(currentReturn)}`}>
+            {formatPercent(currentReturn)}
+          </div>
+        </div>
+
+        {/* 2행: 시장명 코드명 | 최고 예측 | 최저 예측 | 상승확률 */}
+        <div className="flex items-center mt-1 text-xs text-gray-500">
+          <div className="flex-1 min-w-0 whitespace-nowrap">
+            {item.exchange || "KRX"} {item.stock_code}
+          </div>
+          <div className="w-24 flex justify-end">
+            <span className="text-red-400">{formatPercent(item.max_return_if_up)}</span>
+          </div>
+          <div className="w-24 flex justify-end">
+            <span className="text-blue-400">{formatPercent(item.return_if_down)}</span>
+          </div>
+          <div className="w-20 flex justify-end">
+            <span className="text-green-500">{(item.prob_up * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 pb-20">
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-bold">예측</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl font-bold">예측</h1>
+          {isMarketOpen && (
+            <span className="px-2 py-0.5 text-xs bg-green-100 text-green-700 rounded-full">
+              장중
+            </span>
+          )}
+        </div>
         <input
           type="date"
           value={date}
@@ -78,81 +169,63 @@ export default function PredictPage() {
       {loading && <p className="text-gray-500">로딩 중...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
-      {!loading && !error && predictions.length === 0 && (
+      {!loading && !error && strategies.length === 0 && (
         <p className="text-gray-500">해당 날짜의 예측 데이터가 없습니다.</p>
       )}
 
-      <div className="space-y-3">
-        {predictions.map((item) => (
-          <div
-            key={item.id}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
-          >
-            {/* 헤더: 종목명, 시그널 */}
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <span className="font-bold text-lg">{item.stock_name}</span>
-                <span className="text-gray-500 text-sm ml-2">{item.stock_code}</span>
-                {item.exchange && (
-                  <span className="text-gray-400 text-xs ml-1">({item.exchange})</span>
-                )}
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full text-sm font-medium ${getSignalColor(item.signal)}`}
+      {/* 전략 카드 */}
+      {strategies.length > 0 && (
+        <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
+          {/* 탭 헤더 */}
+          <div className="flex overflow-x-auto border-b border-gray-200 dark:border-gray-700 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {strategies.map((strategy) => (
+              <button
+                key={strategy.strategy_info.id}
+                onClick={() => setActiveTab(strategy.strategy_info.id)}
+                className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                  activeTab === strategy.strategy_info.id
+                    ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
+                    : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
               >
-                {item.signal}
-              </span>
-            </div>
-
-            {/* 확률 */}
-            <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
-              <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded">
-                <span className="text-gray-500">상승확률</span>
-                <span className="float-right font-medium text-red-600">
-                  {formatProb(item.prob_up)}
-                </span>
-              </div>
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
-                <span className="text-gray-500">하락확률</span>
-                <span className="float-right font-medium text-blue-600">
-                  {formatProb(item.prob_down)}
-                </span>
-              </div>
-            </div>
-
-            {/* 수익률 정보 */}
-            <div className="grid grid-cols-3 gap-2 text-sm">
-              <div className="text-center">
-                <div className="text-gray-500 text-xs">기대수익</div>
-                <div className={`font-medium ${item.expected_return >= 0 ? "text-red-600" : "text-blue-600"}`}>
-                  {formatPercent(item.expected_return)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-500 text-xs">상승시</div>
-                <div className="font-medium text-red-600">
-                  {formatPercent(item.return_if_up)}
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="text-gray-500 text-xs">하락시</div>
-                <div className="font-medium text-blue-600">
-                  {formatPercent(item.return_if_down)}
-                </div>
-              </div>
-            </div>
-
-            {/* 추가 정보 */}
-            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between text-xs text-gray-500">
-              <span>시가: {item.stock_open.toLocaleString()}원</span>
-              <span>갭: {formatPercent(item.gap_rate)}</span>
-              <span className={getConfidenceColor(item.confidence)}>
-                {item.confidence || "-"}
-              </span>
-            </div>
+                {strategy.strategy_info.description}
+              </button>
+            ))}
           </div>
-        ))}
-      </div>
+
+          {/* 선택된 전략 내용 */}
+          {strategies
+            .filter((strategy) => strategy.strategy_info.id === activeTab)
+            .map((strategy) => (
+              <div key={strategy.strategy_info.id}>
+                {/* 테이블 헤더 */}
+                <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 dark:border-gray-800">
+                  <div className="flex items-center">
+                    <div className="flex-1 min-w-0">종목명</div>
+                    <div className="w-24 text-right">현재가</div>
+                    <div className="w-24 text-right">시작가</div>
+                    <div className="w-20 text-right">등락률</div>
+                  </div>
+                  <div className="flex items-center mt-1">
+                    <div className="flex-1 min-w-0">시장 코드명</div>
+                    <div className="w-24 text-right">최고 예측</div>
+                    <div className="w-24 text-right">최저 예측</div>
+                    <div className="w-20 text-right">상승확률</div>
+                  </div>
+                </div>
+
+                {/* 예측 목록 */}
+                <div className="px-4">
+                  {strategy.predictions.length === 0 ? (
+                    <p className="py-4 text-center text-gray-500 text-sm">예측 데이터 없음</p>
+                  ) : (
+                    strategy.predictions.map(renderPredictionItem)
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
