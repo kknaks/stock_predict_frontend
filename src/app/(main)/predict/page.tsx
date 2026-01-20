@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { predictService } from "@/services/predict";
 import { priceSSEService } from "@/services/price";
 import { StrategyPrediction, PredictionItem, PriceUpdate } from "@/types/predict";
+import StockDetailPanel from "@/components/StockDetailPanel";
 
 export default function PredictPage() {
   const [strategies, setStrategies] = useState<StrategyPrediction[]>([]);
@@ -17,6 +18,16 @@ export default function PredictPage() {
   });
   const [priceUpdated, setPriceUpdated] = useState<Record<string, boolean>>({});
   const timeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
+
+  // 선택된 종목 상태
+  const [selectedStock, setSelectedStock] = useState<PredictionItem | null>(null);
+
+  // 종목별 실시간 가격 데이터 (전체 PriceUpdate)
+  const [priceData, setPriceData] = useState<Record<string, PriceUpdate>>({});
+
+  // 차트용 히스토리 데이터 (종목별로 최근 60개)
+  const [priceHistory, setPriceHistory] = useState<Record<string, PriceUpdate[]>>({});
+  const MAX_HISTORY_LENGTH = 60;
 
   const handlePriceUpdate = useCallback((update: PriceUpdate) => {
     // 가격 업데이트 플래그 설정
@@ -32,12 +43,24 @@ export default function PredictPage() {
       setPriceUpdated((prev) => ({ ...prev, [update.stock_code]: false }));
     }, 500);
 
+    // 전체 가격 데이터 저장
+    setPriceData((prev) => ({ ...prev, [update.stock_code]: update }));
+
+    // 히스토리에 추가 (최대 60개 유지)
+    setPriceHistory((prev) => {
+      const history = prev[update.stock_code] || [];
+      const newHistory = [...history, update].slice(-MAX_HISTORY_LENGTH);
+      return { ...prev, [update.stock_code]: newHistory };
+    });
+
+    // strategies의 current_price 업데이트
+    const currentPrice = Number(update.current_price);
     setStrategies((prev) =>
       prev.map((strategy) => ({
         ...strategy,
         predictions: strategy.predictions.map((item) =>
           item.stock_code === update.stock_code
-            ? { ...item, current_price: update.current_price }
+            ? { ...item, current_price: currentPrice }
             : item
         ),
       }))
@@ -129,11 +152,20 @@ export default function PredictPage() {
     return item.expected_return;
   };
 
+  const handleStockClick = (item: PredictionItem) => {
+    setSelectedStock(item);
+  };
+
+  const handleClosePanel = () => {
+    setSelectedStock(null);
+  };
+
   const renderPredictionItem = (item: PredictionItem) => {
     const currentReturn = calculateReturn(item);
     const isUp = currentReturn >= 0;
     const displayPrice = item.current_price ?? item.stock_open;
     const isUpdated = priceUpdated[item.stock_code];
+    const isSelected = selectedStock?.stock_code === item.stock_code;
 
     // 시가 대비 현재가 비교하여 음영 색상 결정
     const getPriceChangeClass = () => {
@@ -146,7 +178,10 @@ export default function PredictPage() {
     return (
       <div
         key={item.id}
-        className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+        onClick={() => handleStockClick(item)}
+        className={`py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${
+          isSelected ? "bg-blue-50 dark:bg-blue-900/20" : ""
+        }`}
       >
         {/* 1행: 종목 | 현재가 | 시작가 | 등락률 (1.5:1:1:1) */}
         <div className="flex items-center">
@@ -264,6 +299,16 @@ export default function PredictPage() {
               </div>
             ))}
         </div>
+      )}
+
+      {/* 종목 상세 패널 */}
+      {selectedStock && (
+        <StockDetailPanel
+          stock={selectedStock}
+          priceData={priceData[selectedStock.stock_code]}
+          priceHistory={priceHistory[selectedStock.stock_code] || []}
+          onClose={handleClosePanel}
+        />
       )}
     </div>
   );
