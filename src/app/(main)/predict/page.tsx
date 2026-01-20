@@ -148,37 +148,37 @@ export default function PredictPage() {
         key={item.id}
         className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
       >
-        {/* 1행: 종목 | 현재가 | 시작가 | 등락률 */}
+        {/* 1행: 종목 | 현재가 | 시작가 | 등락률 (1.5:1:1:1) */}
         <div className="flex items-center">
-          <div className="flex-1 min-w-0">
+          <div className="flex-[1.5] min-w-0">
             <span className="font-bold text-base whitespace-nowrap">{formatStockName(item.stock_name)}</span>
           </div>
-          <div className={`w-24 flex items-center justify-end font-bold ${getReturnColor(currentReturn)}`}>
+          <div className={`flex-1 flex items-center justify-end font-bold ${getReturnColor(currentReturn)}`}>
             <span className={`px-1 rounded transition-colors duration-300 ${getPriceChangeClass()}`}>
               {formatPrice(displayPrice)}
             </span>
             <span className="ml-0.5 text-[10px]">{isUp ? "▲" : "▼"}</span>
           </div>
-          <div className="w-24 text-right text-gray-600 dark:text-gray-400">
+          <div className="flex-1 text-right text-gray-600 dark:text-gray-400">
             {formatPrice(item.stock_open)}
           </div>
-          <div className={`w-20 text-right font-bold ${getReturnColor(currentReturn)}`}>
+          <div className={`flex-1 text-right font-bold ${getReturnColor(currentReturn)}`}>
             {formatPercent(currentReturn)}
           </div>
         </div>
 
-        {/* 2행: 시장명 코드명 | 최고 예측 | 최저 예측 | 상승확률 */}
+        {/* 2행: 시장명 코드명 | 최고 예측 | 최저 예측 | 상승확률 (1.5:1:1:1) */}
         <div className="flex items-center mt-1 text-xs text-gray-500">
-          <div className="flex-1 min-w-0 whitespace-nowrap">
+          <div className="flex-[1.5] min-w-0 whitespace-nowrap">
             {item.exchange || "KRX"} {item.stock_code}
           </div>
-          <div className="w-24 flex justify-end">
+          <div className="flex-1 flex justify-end">
             <span className="text-red-400">{formatPercent(item.max_return_if_up)}</span>
           </div>
-          <div className="w-24 flex justify-end">
+          <div className="flex-1 flex justify-end">
             <span className="text-blue-400">{formatPercent(item.return_if_down)}</span>
           </div>
-          <div className="w-20 flex justify-end">
+          <div className="flex-1 flex justify-end">
             <span className="text-green-500">{(item.prob_up * 100).toFixed(0)}%</span>
           </div>
         </div>
@@ -240,16 +240,16 @@ export default function PredictPage() {
                 {/* 테이블 헤더 */}
                 <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center">
-                    <div className="flex-1 min-w-0">종목명</div>
-                    <div className="w-24 text-right">현재가</div>
-                    <div className="w-24 text-right">시작가</div>
-                    <div className="w-20 text-right">등락률</div>
+                    <div className="flex-[1.5] min-w-0">종목명</div>
+                    <div className="flex-1 text-right">현재가</div>
+                    <div className="flex-1 text-right">시작가</div>
+                    <div className="flex-1 text-right">등락률</div>
                   </div>
                   <div className="flex items-center mt-1">
-                    <div className="flex-1 min-w-0">시장 코드명</div>
-                    <div className="w-24 text-right">최고 예측</div>
-                    <div className="w-24 text-right">최저 예측</div>
-                    <div className="w-20 text-right">상승확률</div>
+                    <div className="flex-[1.5] min-w-0">시장 코드명</div>
+                    <div className="flex-1 text-right">최고 예측</div>
+                    <div className="flex-1 text-right">최저 예측</div>
+                    <div className="flex-1 text-right">상승확률</div>
                   </div>
                 </div>
 
