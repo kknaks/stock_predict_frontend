@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PredictionItem, PriceUpdate, StockMetadata } from "@/types/predict";
+import { PredictionItem, PriceUpdate, StockMetadata, HourCandle } from "@/types/predict";
 import { stockService } from "@/services/stock";
+import { priceService } from "@/services/price";
 
 interface StockDetailPanelProps {
   stock: PredictionItem;
@@ -19,6 +20,12 @@ export default function StockDetailPanel({
 }: StockDetailPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [metadata, setMetadata] = useState<StockMetadata | null>(null);
+  const [hourCandles, setHourCandles] = useState<HourCandle[]>([]);
+  const [candleSource, setCandleSource] = useState<string>("");
+
+  // 오늘 날짜인지 확인
+  const today = new Date().toISOString().split("T")[0];
+  const isToday = stock.prediction_date === today;
 
   // 메타데이터 조회 (시가총액)
   useEffect(() => {
@@ -27,6 +34,29 @@ export default function StockDetailPanel({
       .then(setMetadata)
       .catch((err) => console.error("Failed to fetch metadata:", err));
   }, [stock.stock_code]);
+
+  // 시간봉 데이터 조회 (API)
+  useEffect(() => {
+    const fetchCandles = async () => {
+      try {
+        if (isToday) {
+          // 오늘: /today API (캐시 우선)
+          const response = await priceService.getTodayCandles(stock.stock_code);
+          setHourCandles(response.candles);
+          setCandleSource(response.source);
+        } else {
+          // 과거: 해당 날짜로 DB 조회
+          const response = await priceService.getCandlesByDate(stock.stock_code, stock.prediction_date);
+          setHourCandles(response.candles);
+          setCandleSource(response.source);
+        }
+      } catch (err) {
+        console.error("Failed to fetch hour candles:", err);
+      }
+    };
+
+    fetchCandles();
+  }, [stock.stock_code, stock.prediction_date, isToday]);
 
   // 현재가 (실시간 데이터 또는 예측 데이터)
   const currentPrice = priceData
@@ -157,7 +187,13 @@ export default function StockDetailPanel({
   // 차트 그리기 (시간 봉 캔들스틱)
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || priceHistory.length < 2) return;
+    if (!canvas) return;
+
+    // API 시간봉 또는 실시간 틱 데이터 확인
+    const hasApiCandles = hourCandles.length > 0;
+    const hasRealtimeTicks = priceHistory.length >= 2;
+
+    if (!hasApiCandles && !hasRealtimeTicks) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -178,11 +214,42 @@ export default function StockDetailPanel({
     // 배경 지우기
     ctx.clearRect(0, 0, width, height);
 
-    // 시간 봉 데이터 생성
-    const candles = getHourlyCandles(priceHistory);
+    // 시간봉 데이터 결정: API 데이터 우선, 없으면 실시간 틱에서 계산
+    let candles: { hour: number; open: number; high: number; low: number; close: number }[];
+
+    if (hasApiCandles) {
+      // API에서 가져온 시간봉 사용
+      candles = hourCandles.map((c) => ({
+        hour: c.hour,
+        open: c.open,
+        high: c.high,
+        low: c.low,
+        close: c.close,
+      }));
+
+      // 오늘이고 실시간 틱이 있으면, 현재 시간봉 업데이트
+      if (isToday && hasRealtimeTicks) {
+        const realtimeCandles = getHourlyCandles(priceHistory);
+        realtimeCandles.forEach((rc) => {
+          const existingIdx = candles.findIndex((c) => c.hour === rc.hour);
+          if (existingIdx >= 0) {
+            // 기존 캔들 업데이트 (실시간 데이터로)
+            candles[existingIdx] = rc;
+          } else {
+            // 새 시간대 캔들 추가
+            candles.push(rc);
+          }
+        });
+        candles.sort((a, b) => a.hour - b.hour);
+      }
+    } else {
+      // 실시간 틱에서 시간봉 계산
+      candles = getHourlyCandles(priceHistory);
+    }
 
     if (candles.length === 0) {
       // 데이터 없으면 기존 라인 차트로 대체
+      if (!hasRealtimeTicks) return;
       const prices = priceHistory.map((p) => Number(p.current_price));
       const minPrice = Math.min(...prices);
       const maxPrice = Math.max(...prices);
@@ -261,7 +328,7 @@ export default function StockDetailPanel({
       const x = padding.left + candleWidth * slotIndex + candleWidth / 2;
       ctx.fillText(`${hour}시`, x, height - 5);
     }
-  }, [priceHistory, openPrice, isUp]);
+  }, [priceHistory, openPrice, isUp, hourCandles, isToday]);
 
   return (
     <>
@@ -306,7 +373,7 @@ export default function StockDetailPanel({
         {/* 차트 */}
         <div className="p-4">
           <div className="h-40 bg-gray-50 dark:bg-gray-800 rounded-lg overflow-hidden">
-            {priceHistory.length >= 2 ? (
+            {hourCandles.length > 0 || priceHistory.length >= 2 ? (
               <canvas
                 ref={canvasRef}
                 className="w-full h-full"
@@ -314,7 +381,7 @@ export default function StockDetailPanel({
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                차트 데이터 수집 중...
+                {isToday ? "차트 데이터 수집 중..." : "시간봉 데이터 없음"}
               </div>
             )}
           </div>

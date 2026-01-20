@@ -1,6 +1,33 @@
-import { PriceUpdate } from "@/types/predict";
+import { PriceUpdate, HourCandleResponse } from "@/types/predict";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// 시간봉 조회 서비스
+export const priceService = {
+  // 오늘 시간봉 조회 (캐시 우선)
+  async getTodayCandles(stockCode: string): Promise<HourCandleResponse> {
+    const response = await fetch(`${API_URL}/api/v1/price/candles/${stockCode}/today`);
+    if (!response.ok) throw new Error("Failed to fetch today candles");
+    return response.json();
+  },
+
+  // 특정 날짜 시간봉 조회 (DB)
+  async getCandlesByDate(stockCode: string, date: string): Promise<HourCandleResponse> {
+    const response = await fetch(
+      `${API_URL}/api/v1/price/candles/${stockCode}?start_date=${date}&end_date=${date}`
+    );
+    if (!response.ok) throw new Error("Failed to fetch candles by date");
+    const data = await response.json();
+    // 응답 형식 통일
+    return {
+      stock_code: data.stock_code,
+      date: date,
+      source: "database",
+      count: data.count,
+      candles: data.candles,
+    };
+  },
+};
 
 export type PriceUpdateCallback = (update: PriceUpdate) => void;
 
