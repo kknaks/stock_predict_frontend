@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { PredictionItem, PriceUpdate } from "@/types/predict";
+import { useEffect, useRef, useState } from "react";
+import { PredictionItem, PriceUpdate, StockMetadata } from "@/types/predict";
+import { stockService } from "@/services/stock";
 
 interface StockDetailPanelProps {
   stock: PredictionItem;
@@ -17,6 +18,15 @@ export default function StockDetailPanel({
   onClose,
 }: StockDetailPanelProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [metadata, setMetadata] = useState<StockMetadata | null>(null);
+
+  // 메타데이터 조회 (시가총액)
+  useEffect(() => {
+    stockService
+      .getMetadata(stock.stock_code)
+      .then(setMetadata)
+      .catch((err) => console.error("Failed to fetch metadata:", err));
+  }, [stock.stock_code]);
 
   // 현재가 (실시간 데이터 또는 예측 데이터)
   const currentPrice = priceData
@@ -93,6 +103,17 @@ export default function StockDetailPanel({
       return `${(value / 10000).toFixed(0)}만`;
     }
     return value.toLocaleString();
+  };
+
+  const formatMarketCap = (value: number | null) => {
+    if (value === null) return "-";
+    if (value >= 1000000000000) {
+      return `${(value / 1000000000000).toFixed(2)}조원`;
+    }
+    if (value >= 100000000) {
+      return `${(value / 100000000).toFixed(0)}억원`;
+    }
+    return `${value.toLocaleString()}원`;
   };
 
   // 차트 그리기
@@ -291,8 +312,12 @@ export default function StockDetailPanel({
           </div>
         </div>
 
-        {/* 체결강도 */}
+        {/* 시가총액 & 체결강도 */}
         <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-500 text-sm">시가총액</span>
+            <span className="font-medium">{formatMarketCap(metadata?.market_cap ?? null)}</span>
+          </div>
           <div className="flex justify-between items-center">
             <span className="text-gray-500 text-sm">체결강도</span>
             <span className={`font-medium ${tradeStrength >= 100 ? "text-red-500" : "text-blue-500"}`}>

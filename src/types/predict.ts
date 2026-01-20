@@ -45,6 +45,18 @@ export interface PredictListResponse {
   data: StrategyPrediction[];
 }
 
+export interface StockMetadata {
+  symbol: string;
+  name: string;
+  exchange: string;
+  sector: string | null;
+  industry: string | null;
+  market_cap: number | null;
+  listing_date: string | null;
+  status: string;
+  delist_date: string | null;
+}
+
 export interface PriceUpdate {
   timestamp: string;
   stock_code: string;
