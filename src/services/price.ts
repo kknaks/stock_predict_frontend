@@ -21,7 +21,11 @@ export class PriceSSEService {
 
     this.eventSource.addEventListener("price_update", (event) => {
       try {
-        const data: PriceUpdate = JSON.parse(event.data);
+        const rawData = JSON.parse(event.data);
+        const data: PriceUpdate = {
+          ...rawData,
+          current_price: Number(rawData.current_price),
+        };
         this.onPriceUpdate?.(data);
       } catch (e) {
         console.error("Failed to parse price update:", e);

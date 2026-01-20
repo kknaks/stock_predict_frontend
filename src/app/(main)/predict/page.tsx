@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { predictService } from "@/services/predict";
 import { priceSSEService } from "@/services/price";
 import { StrategyPrediction, PredictionItem, PriceUpdate } from "@/types/predict";
+
+type PriceChange = "up" | "down" | null;
 
 export default function PredictPage() {
   const [strategies, setStrategies] = useState<StrategyPrediction[]>([]);
@@ -15,8 +17,33 @@ export default function PredictPage() {
     const today = new Date();
     return today.toISOString().split("T")[0];
   });
+  const [priceChanges, setPriceChanges] = useState<Record<string, PriceChange>>({});
+  const prevPricesRef = useRef<Record<string, number>>({});
+  const timeoutsRef = useRef<Record<string, NodeJS.Timeout>>({});
 
   const handlePriceUpdate = useCallback((update: PriceUpdate) => {
+    const prevPrice = prevPricesRef.current[update.stock_code];
+    const newPrice = update.current_price;
+
+    // 가격 변동 방향 결정
+    if (prevPrice !== undefined && prevPrice !== newPrice) {
+      const direction: PriceChange = newPrice > prevPrice ? "up" : "down";
+      setPriceChanges((prev) => ({ ...prev, [update.stock_code]: direction }));
+
+      // 이전 타이머 클리어
+      if (timeoutsRef.current[update.stock_code]) {
+        clearTimeout(timeoutsRef.current[update.stock_code]);
+      }
+
+      // 500ms 후 애니메이션 효과 제거
+      timeoutsRef.current[update.stock_code] = setTimeout(() => {
+        setPriceChanges((prev) => ({ ...prev, [update.stock_code]: null }));
+      }, 500);
+    }
+
+    // 이전 가격 업데이트
+    prevPricesRef.current[update.stock_code] = newPrice;
+
     setStrategies((prev) =>
       prev.map((strategy) => ({
         ...strategy,
@@ -72,9 +99,22 @@ export default function PredictPage() {
     };
   }, [isMarketOpen, strategies.length, handlePriceUpdate]);
 
+  // 타이머 클린업
+  useEffect(() => {
+    const timeouts = timeoutsRef.current;
+    return () => {
+      Object.values(timeouts).forEach(clearTimeout);
+    };
+  }, []);
+
   const formatPrice = (value: number | null) => {
     if (value === null) return "-";
     return value.toLocaleString();
+  };
+
+  const formatStockName = (name: string) => {
+    if (name.length > 6) return name.slice(0, 6) + "...";
+    return name;
   };
 
   const formatPercent = (value: number | null) => {
@@ -105,16 +145,23 @@ export default function PredictPage() {
     const currentReturn = calculateReturn(item);
     const isUp = currentReturn >= 0;
     const displayPrice = item.current_price ?? item.stock_open;
+    const priceChange = priceChanges[item.stock_code];
+
+    const getChangeClass = () => {
+      if (priceChange === "up") return "bg-red-100 dark:bg-red-900/30";
+      if (priceChange === "down") return "bg-blue-100 dark:bg-blue-900/30";
+      return "";
+    };
 
     return (
       <div
         key={item.id}
-        className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+        className={`py-3 px-2 -mx-2 rounded-lg border-b border-gray-100 dark:border-gray-800 last:border-b-0 transition-colors duration-300 ${getChangeClass()}`}
       >
         {/* 1행: 종목 | 현재가 | 시작가 | 등락률 */}
         <div className="flex items-center">
           <div className="flex-1 min-w-0">
-            <span className="font-bold text-base truncate">{item.stock_name}</span>
+            <span className="font-bold text-base">{formatStockName(item.stock_name)}</span>
           </div>
           <div className={`w-24 flex items-center justify-end font-bold ${getReturnColor(currentReturn)}`}>
             <span>{formatPrice(displayPrice)}</span>
