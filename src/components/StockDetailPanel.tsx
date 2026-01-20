@@ -116,7 +116,45 @@ export default function StockDetailPanel({
     return `${value.toLocaleString()}원`;
   };
 
-  // 차트 그리기
+  // 틱 데이터를 시간 봉(OHLC)으로 변환
+  const getHourlyCandles = (history: PriceUpdate[]) => {
+    if (history.length === 0) return [];
+
+    // 시간별로 그룹화 (09~15시)
+    const hourlyData: { [hour: number]: PriceUpdate[] } = {};
+
+    history.forEach((tick) => {
+      const hour = parseInt(tick.trade_time.slice(0, 2), 10);
+      // 09시 ~ 15시 데이터만 사용 (장 마감 15:30이지만 15시 봉까지)
+      if (hour >= 9 && hour <= 15) {
+        if (!hourlyData[hour]) {
+          hourlyData[hour] = [];
+        }
+        hourlyData[hour].push(tick);
+      }
+    });
+
+    // OHLC 캔들 생성
+    const candles: { hour: number; open: number; high: number; low: number; close: number }[] = [];
+
+    for (let hour = 9; hour <= 15; hour++) {
+      const ticks = hourlyData[hour];
+      if (ticks && ticks.length > 0) {
+        const prices = ticks.map((t) => Number(t.current_price));
+        candles.push({
+          hour,
+          open: prices[0],
+          high: Math.max(...prices),
+          low: Math.min(...prices),
+          close: prices[prices.length - 1],
+        });
+      }
+    }
+
+    return candles;
+  };
+
+  // 차트 그리기 (시간 봉 캔들스틱)
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || priceHistory.length < 2) return;
@@ -137,14 +175,42 @@ export default function StockDetailPanel({
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
 
-    // 데이터 추출
-    const prices = priceHistory.map((p) => Number(p.current_price));
-    const minPrice = Math.min(...prices);
-    const maxPrice = Math.max(...prices);
-    const priceRange = maxPrice - minPrice || 1;
-
     // 배경 지우기
     ctx.clearRect(0, 0, width, height);
+
+    // 시간 봉 데이터 생성
+    const candles = getHourlyCandles(priceHistory);
+
+    if (candles.length === 0) {
+      // 데이터 없으면 기존 라인 차트로 대체
+      const prices = priceHistory.map((p) => Number(p.current_price));
+      const minPrice = Math.min(...prices);
+      const maxPrice = Math.max(...prices);
+      const priceRange = maxPrice - minPrice || 1;
+
+      ctx.strokeStyle = isUp ? "#EF4444" : "#3B82F6";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      prices.forEach((price, i) => {
+        const x = padding.left + (i / (prices.length - 1)) * chartWidth;
+        const y = padding.top + chartHeight * (1 - (price - minPrice) / priceRange);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+      return;
+    }
+
+    // 전체 가격 범위 계산
+    const allPrices = candles.flatMap((c) => [c.high, c.low]);
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
+    const priceRange = maxPrice - minPrice || 1;
+
+    // 09시~15시까지 7개 봉 (총 슬롯)
+    const totalSlots = 7;
+    const candleWidth = chartWidth / totalSlots;
+    const bodyWidth = candleWidth * 0.6;
 
     // 기준선 (시가)
     const openY = padding.top + chartHeight * (1 - (openPrice - minPrice) / priceRange);
@@ -156,64 +222,44 @@ export default function StockDetailPanel({
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // 가격 라인
-    ctx.strokeStyle = isUp ? "#EF4444" : "#3B82F6";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
+    // 캔들 그리기
+    candles.forEach((candle) => {
+      const slotIndex = candle.hour - 9; // 09시 = 0, 10시 = 1, ...
+      const centerX = padding.left + candleWidth * slotIndex + candleWidth / 2;
 
-    prices.forEach((price, i) => {
-      const x = padding.left + (i / (prices.length - 1)) * chartWidth;
-      const y = padding.top + chartHeight * (1 - (price - minPrice) / priceRange);
+      const isUpCandle = candle.close >= candle.open;
+      const color = isUpCandle ? "#EF4444" : "#3B82F6"; // 양봉: 빨강, 음봉: 파랑
 
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      // 꼬리 (위아래 심지)
+      const highY = padding.top + chartHeight * (1 - (candle.high - minPrice) / priceRange);
+      const lowY = padding.top + chartHeight * (1 - (candle.low - minPrice) / priceRange);
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(centerX, highY);
+      ctx.lineTo(centerX, lowY);
+      ctx.stroke();
+
+      // 몸통
+      const openY = padding.top + chartHeight * (1 - (candle.open - minPrice) / priceRange);
+      const closeY = padding.top + chartHeight * (1 - (candle.close - minPrice) / priceRange);
+      const bodyTop = Math.min(openY, closeY);
+      const bodyHeight = Math.max(Math.abs(closeY - openY), 1);
+
+      ctx.fillStyle = color;
+      ctx.fillRect(centerX - bodyWidth / 2, bodyTop, bodyWidth, bodyHeight);
     });
-
-    ctx.stroke();
-
-    // 그라데이션 채우기
-    const gradient = ctx.createLinearGradient(0, padding.top, 0, height - padding.bottom);
-    if (isUp) {
-      gradient.addColorStop(0, "rgba(239, 68, 68, 0.3)");
-      gradient.addColorStop(1, "rgba(239, 68, 68, 0)");
-    } else {
-      gradient.addColorStop(0, "rgba(59, 130, 246, 0.3)");
-      gradient.addColorStop(1, "rgba(59, 130, 246, 0)");
-    }
-
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    prices.forEach((price, i) => {
-      const x = padding.left + (i / (prices.length - 1)) * chartWidth;
-      const y = padding.top + chartHeight * (1 - (price - minPrice) / priceRange);
-
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    ctx.lineTo(width - padding.right, height - padding.bottom);
-    ctx.lineTo(padding.left, height - padding.bottom);
-    ctx.closePath();
-    ctx.fill();
 
     // 시간 라벨
-    if (priceHistory.length > 0) {
-      ctx.fillStyle = "#9CA3AF";
-      ctx.font = "10px sans-serif";
-      ctx.textAlign = "center";
+    ctx.fillStyle = "#9CA3AF";
+    ctx.font = "9px sans-serif";
+    ctx.textAlign = "center";
 
-      const firstTime = priceHistory[0].trade_time;
-      const lastTime = priceHistory[priceHistory.length - 1].trade_time;
-
-      const formatTime = (t: string) => `${t.slice(0, 2)}:${t.slice(2, 4)}`;
-
-      ctx.fillText(formatTime(firstTime), padding.left + 20, height - 5);
-      ctx.fillText(formatTime(lastTime), width - padding.right - 20, height - 5);
+    for (let hour = 9; hour <= 15; hour++) {
+      const slotIndex = hour - 9;
+      const x = padding.left + candleWidth * slotIndex + candleWidth / 2;
+      ctx.fillText(`${hour}시`, x, height - 5);
     }
   }, [priceHistory, openPrice, isUp]);
 
