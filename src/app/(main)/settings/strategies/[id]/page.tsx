@@ -38,7 +38,8 @@ export default function StrategyDetailPage() {
       setError("");
       try {
         const profile = await userService.getProfile();
-        const found = profile.user_strategy.find((s) => s.id === id);
+        const allStrategies = profile.accounts.flatMap((account) => account.user_strategies);
+        const found = allStrategies.find((s) => s.id === id);
         if (found) {
           setStrategy(found);
           setInvestmentWeight(found.investment_weight);
