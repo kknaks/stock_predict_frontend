@@ -59,6 +59,8 @@ export default function BalancePage() {
         return "손절";
       case "sold":
         return "매도";
+      case "not_purchased":
+        return "실패";
       default:
         return status;
     }
@@ -74,16 +76,23 @@ export default function BalancePage() {
         return "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400";
       case "sold":
         return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400";
+      case "not_purchased":
+        return "bg-black text-white dark:bg-gray-950 dark:text-gray-300";
       default:
         return "bg-gray-100 text-gray-700";
     }
   };
 
-  const filteredPositions = data?.positions.filter((position) => {
+  const filteredPositions = (data?.positions.filter((position) => {
     if (activeTab === "all") return true;
     if (activeTab === "holding") return position.status === "holding";
-    return position.status !== "holding";
-  }) || [];
+    return position.status !== "holding" && position.status !== "not_purchased";
+  }) || []).sort((a, b) => {
+    // 실패(not_purchased)는 제일 아래로
+    if (a.status === "not_purchased" && b.status !== "not_purchased") return 1;
+    if (a.status !== "not_purchased" && b.status === "not_purchased") return -1;
+    return 0;
+  });
 
   const formatStockName = (name: string) => {
     if (name.length > 6) return name.slice(0, 6) + "...";
@@ -92,6 +101,8 @@ export default function BalancePage() {
 
   const renderPositionItem = (position: StockPosition) => {
     const isHolding = position.status === "holding";
+    const isNotPurchased = position.status === "not_purchased";
+    const showCurrentPrice = isHolding || isNotPurchased;
 
     return (
       <div
@@ -108,14 +119,14 @@ export default function BalancePage() {
               {getStatusLabel(position.status)}
             </span>
           </div>
-          <div className={`flex-1 text-right font-bold ${getProfitColor(position.profit_amount)}`}>
-            {formatPrice(position.profit_amount)}
+          <div className={`flex-1 text-right font-bold ${isNotPurchased ? "text-gray-400" : getProfitColor(position.profit_amount)}`}>
+            {isNotPurchased ? "-" : formatPrice(position.profit_amount)}
           </div>
           <div className="flex-1 text-right">
-            {isHolding ? formatPrice(position.eval_amount) : formatPrice(position.sell_amount)}
+            {isNotPurchased ? "-" : (isHolding ? formatPrice(position.eval_amount) : formatPrice(position.sell_amount))}
           </div>
-          <div className={`flex-1 text-right font-bold ${getProfitColor(position.profit_rate)}`}>
-            {isHolding ? formatPrice(position.current_price) : formatPrice(position.sell_price)}
+          <div className={`flex-1 text-right font-bold ${isNotPurchased ? "text-gray-500" : getProfitColor(position.profit_rate)}`}>
+            {showCurrentPrice ? formatPrice(position.current_price) : formatPrice(position.sell_price)}
           </div>
         </div>
 

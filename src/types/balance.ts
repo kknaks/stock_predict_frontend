@@ -1,4 +1,4 @@
-export type PositionStatus = "holding" | "target_reached" | "stop_loss" | "sold";
+export type PositionStatus = "holding" | "target_reached" | "stop_loss" | "sold" | "not_purchased";
 
 export interface StockPosition {
   stock_code: string;
