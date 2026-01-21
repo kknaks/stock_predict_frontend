@@ -127,6 +127,7 @@ export default function HistoryPage() {
           profit_rate: 0,
           profit_amount: 0,
           cumulative_profit_rate: 0,
+          cumulative_profit_amount: 0,
           buy_amount: 0,
           sell_amount: 0,
         });
