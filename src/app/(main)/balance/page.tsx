@@ -100,11 +100,11 @@ export default function BalancePage() {
       >
         {/* 1행: 종목명 | 평가손익 | 평가금액 | 현재가 */}
         <div className="flex items-center">
-          <div className="flex-[1.5] min-w-0 flex items-center gap-2">
-            <span className="font-bold text-base whitespace-nowrap">
+          <div className="flex-[1.5] min-w-0 flex items-center gap-1">
+            <span className="font-bold text-sm whitespace-nowrap">
               {formatStockName(position.stock_name)}
             </span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded ${getStatusColor(position.status)}`}>
+            <span className={`text-[10px] px-1 py-0.5 rounded whitespace-nowrap ${getStatusColor(position.status)}`}>
               {getStatusLabel(position.status)}
             </span>
           </div>
