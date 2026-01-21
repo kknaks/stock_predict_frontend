@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { historyService } from "@/services/history";
-import { HistoryResponse, DailyHistory } from "@/types/history";
+import { HistoryResponse, AccountHistoryResponse, DailyHistory } from "@/types/history";
 
 type ViewMode = "calendar" | "daily" | "cumulative";
 
@@ -22,6 +22,7 @@ export default function HistoryPage() {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState<DailyHistory | null>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
 
   const dateString = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -35,6 +36,10 @@ export default function HistoryPage() {
     try {
       const response = await historyService.getHistory(dateString);
       setData(response);
+      // 첫 번째 계좌 자동 선택
+      if (response.accounts.length > 0 && !selectedAccountId) {
+        setSelectedAccountId(response.accounts[0].account_id);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "데이터 로딩 실패");
     } finally {
@@ -45,6 +50,11 @@ export default function HistoryPage() {
   useEffect(() => {
     fetchHistory();
   }, [dateString]);
+
+  // 선택된 계좌 데이터
+  const selectedAccount: AccountHistoryResponse | undefined = data?.accounts.find(
+    (acc) => acc.account_id === selectedAccountId
+  );
 
   const formatPrice = (value: number) => {
     return Math.round(value).toLocaleString();
@@ -93,7 +103,7 @@ export default function HistoryPage() {
 
   // 달력 데이터 생성
   const calendarData = useMemo(() => {
-    if (!data) return [];
+    if (!data || !selectedAccount) return [];
 
     const year = data.year;
     const month = data.month - 1;
@@ -103,7 +113,7 @@ export default function HistoryPage() {
     const daysInMonth = lastDay.getDate();
 
     const historyMap = new Map(
-      data.daily_histories.map((h) => [h.date, h])
+      selectedAccount.daily_histories.map((h) => [h.date, h])
     );
 
     const weeks: (DailyHistory | null)[][] = [];
@@ -148,13 +158,13 @@ export default function HistoryPage() {
     }
 
     return weeks;
-  }, [data]);
+  }, [data, selectedAccount]);
 
   // 차트 데이터
   const chartData = useMemo(() => {
-    if (!data || data.daily_histories.length === 0) return null;
+    if (!selectedAccount || selectedAccount.daily_histories.length === 0) return null;
 
-    const histories = [...data.daily_histories].sort(
+    const histories = [...selectedAccount.daily_histories].sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
 
@@ -181,7 +191,7 @@ export default function HistoryPage() {
       maxCumulativeRate,
       minCumulativeRate,
     };
-  }, [data]);
+  }, [selectedAccount]);
 
   const renderCalendar = () => {
     const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
@@ -375,80 +385,6 @@ export default function HistoryPage() {
     );
   };
 
-  const renderLineChart = (
-    data: number[],
-    labels: string[],
-    maxVal: number,
-    minVal: number,
-    formatFn: (v: number) => string,
-    title: string
-  ) => {
-    const range = maxVal - minVal || 1;
-    const chartHeight = 200;
-    const chartWidth = 100;
-
-    const points = data.map((value, index) => {
-      const x = (index / (data.length - 1 || 1)) * chartWidth;
-      const y = ((maxVal - value) / range) * chartHeight;
-      return { x, y, value };
-    });
-
-    const pathD = points
-      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-      .join(" ");
-
-    return (
-      <div className="bg-white dark:bg-gray-900 rounded-xl p-4">
-        <div className="text-sm font-medium mb-4">{title}</div>
-        <div className="relative h-[200px]">
-          <svg
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            className="w-full h-full"
-            preserveAspectRatio="none"
-          >
-            {/* 0선 */}
-            {minVal < 0 && maxVal > 0 && (
-              <line
-                x1="0"
-                y1={((maxVal - 0) / range) * chartHeight}
-                x2={chartWidth}
-                y2={((maxVal - 0) / range) * chartHeight}
-                stroke="currentColor"
-                className="text-gray-300 dark:text-gray-600"
-                strokeWidth="0.5"
-              />
-            )}
-            {/* 라인 */}
-            <path
-              d={pathD}
-              fill="none"
-              stroke="currentColor"
-              className={data[data.length - 1] >= 0 ? "text-red-500" : "text-blue-500"}
-              strokeWidth="1.5"
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* 점들 */}
-            {points.map((p, i) => (
-              <circle
-                key={i}
-                cx={p.x}
-                cy={p.y}
-                r="1.5"
-                fill="currentColor"
-                className={p.value >= 0 ? "text-red-500" : "text-blue-500"}
-              />
-            ))}
-          </svg>
-        </div>
-        {/* X축 레이블 */}
-        <div className="flex justify-between mt-2 text-[10px] text-gray-400">
-          {labels.length > 0 && <span>{labels[0].split("-")[2]}일</span>}
-          {labels.length > 1 && <span>{labels[labels.length - 1].split("-")[2]}일</span>}
-        </div>
-      </div>
-    );
-  };
-
   const renderDailyChart = () => {
     if (!chartData || !data) return <p className="text-gray-500">데이터가 없습니다.</p>;
 
@@ -572,23 +508,41 @@ export default function HistoryPage() {
       {loading && <p className="text-gray-500">로딩 중...</p>}
       {error && <p className="text-red-500">{error}</p>}
 
-      {!loading && !error && data && (
+      {!loading && !error && data && data.accounts.length > 0 && selectedAccount && (
         <>
-          {/* 월간 요약 카드 */}
+          {/* 계좌 탭 + 월간 요약 카드 */}
           <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4">
+            {/* 계좌 탭 */}
+            <div className="flex gap-6 border-b border-gray-200 dark:border-gray-700 mb-4">
+              {data.accounts.map((account) => (
+                <button
+                  key={account.account_id}
+                  onClick={() => setSelectedAccountId(account.account_id)}
+                  className={`pb-3 px-4 text-base font-semibold transition-colors border-b-2 -mb-px ${
+                    selectedAccountId === account.account_id
+                      ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
+                      : "border-transparent text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  }`}
+                >
+                  {account.account_name}
+                </button>
+              ))}
+            </div>
+
+            {/* 월간 수익 */}
             <div className="text-sm text-gray-500 mb-1">월간 수익</div>
             <div className="flex items-baseline gap-3">
-              <span className={`text-2xl font-bold ${getProfitColor(data.total_profit_amount)}`}>
-                {formatPrice(data.total_profit_amount)}원
+              <span className={`text-2xl font-bold ${getProfitColor(selectedAccount.total_profit_amount)}`}>
+                {formatPrice(selectedAccount.total_profit_amount)}원
               </span>
-              <span className={`text-lg font-medium ${getProfitColor(data.total_profit_rate)}`}>
-                {formatPercent(data.total_profit_rate)}
+              <span className={`text-lg font-medium ${getProfitColor(selectedAccount.total_profit_rate)}`}>
+                {formatPercent(selectedAccount.total_profit_rate)}
               </span>
             </div>
             <div className="flex gap-4 mt-2 text-xs text-gray-500">
-              <span>거래일 {data.trading_days}일</span>
-              <span>매수 {formatPrice(data.total_buy_amount)}원</span>
-              <span>매도 {formatPrice(data.total_sell_amount)}원</span>
+              <span>거래일 {selectedAccount.trading_days}일</span>
+              <span>매수 {formatPrice(selectedAccount.total_buy_amount)}원</span>
+              <span>매도 {formatPrice(selectedAccount.total_sell_amount)}원</span>
             </div>
           </div>
 
@@ -633,7 +587,7 @@ export default function HistoryPage() {
         </>
       )}
 
-      {!loading && !error && !data && (
+      {!loading && !error && (!data || data.accounts.length === 0) && (
         <p className="text-gray-500">해당 월의 데이터가 없습니다.</p>
       )}
 

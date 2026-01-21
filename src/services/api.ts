@@ -42,6 +42,11 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     throw new Error(error.detail || "요청 실패");
   }
 
+  // 204 No Content 처리
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json();
 }
 
@@ -57,4 +62,7 @@ export const api = {
 
   delete: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: "DELETE" }),
+
+  patch: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: "PATCH", body: JSON.stringify(body) }),
 };

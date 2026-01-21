@@ -33,11 +33,19 @@ export interface TdPositionSummary {
   total_stop_loss_count: number;
 }
 
-export interface TdPositionResponse {
-  user_id: number;
-  date: string;
+// 계좌별 포지션 데이터
+export interface AccountPosition {
+  account_id: number;
+  account_number: string;
+  account_name: string;
   daily_strategy_id: number | null;
   summary: TdPositionSummary;
   positions: StockPosition[];
   updated_at: string | null;
+}
+
+// 응답 전체
+export interface TdPositionResponse {
+  date: string;
+  accounts: AccountPosition[];
 }
