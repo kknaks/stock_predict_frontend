@@ -1,6 +1,6 @@
 {
   "name": "Stock Predict",
-  "short_name": "주식예측",
+  "short_name": "GAP상",
   "description": "주식 자동매매 프론트엔드",
   "start_url": "/",
   "display": "standalone",
