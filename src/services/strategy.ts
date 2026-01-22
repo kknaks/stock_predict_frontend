@@ -35,23 +35,23 @@ export const strategyService = {
     });
   },
 
-  async create(data: StrategyCreateRequest): Promise<void> {
+  async create(accountId: number, data: StrategyCreateRequest): Promise<void> {
     const token = authService.getAccessToken();
-    return api.post("/api/v1/strategy", data, {
+    return api.post(`/api/v1/strategy?account_id=${accountId}`, data, {
       token: token || undefined,
     });
   },
 
-  async update(id: number, data: Partial<StrategyUpdateRequest>): Promise<void> {
+  async update(id: number, accountId: number, data: Partial<StrategyUpdateRequest>): Promise<void> {
     const token = authService.getAccessToken();
-    return api.patch(`/api/v1/strategy/${id}`, data, {
+    return api.patch(`/api/v1/strategy/${id}?account_id=${accountId}`, data, {
       token: token || undefined,
     });
   },
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number, accountId: number): Promise<void> {
     const token = authService.getAccessToken();
-    return api.delete(`/api/v1/strategy/${id}`, {
+    return api.delete(`/api/v1/strategy/${id}?account_id=${accountId}`, {
       token: token || undefined,
     });
   },

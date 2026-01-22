@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { strategyService } from "@/services/strategy";
 import { StrategyInfo, StrategyWeightType } from "@/types/user";
 
 export default function StrategyCreatePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const accountId = searchParams.get("account_id");
 
   const [strategyInfoList, setStrategyInfoList] = useState<StrategyInfo[]>([]);
   const [weightTypes, setWeightTypes] = useState<StrategyWeightType[]>([]);
@@ -19,7 +21,7 @@ export default function StrategyCreatePage() {
   const [investmentWeight, setInvestmentWeight] = useState(0.9);
   const [lsRatio, setLsRatio] = useState(0);
   const [tpRatio, setTpRatio] = useState(0);
-  const [isAuto, setIsAuto] = useState(false);
+  const [isAuto, setIsAuto] = useState(true);
   const [weightTypeId, setWeightTypeId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -46,6 +48,10 @@ export default function StrategyCreatePage() {
   }, []);
 
   const handleSave = async () => {
+    if (!accountId) {
+      setError("계좌 정보가 없습니다");
+      return;
+    }
     if (!strategyId) {
       setError("전략을 선택해주세요");
       return;
@@ -58,7 +64,7 @@ export default function StrategyCreatePage() {
     setSaving(true);
     setError("");
     try {
-      await strategyService.create({
+      await strategyService.create(Number(accountId), {
         strategy_id: strategyId,
         investment_weight: investmentWeight,
         ls_ratio: lsRatio,
@@ -100,9 +106,9 @@ export default function StrategyCreatePage() {
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {!loading && (
-        <div className="space-y-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
           {/* 전략 선택 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-400 mb-2">전략 선택</p>
             <div className="grid grid-cols-2 gap-2">
               {strategyInfoList.map((info) => (
@@ -111,8 +117,8 @@ export default function StrategyCreatePage() {
                   onClick={() => setStrategyId(info.id)}
                   className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                     strategyId === info.id
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {info.description}
@@ -122,7 +128,7 @@ export default function StrategyCreatePage() {
           </div>
 
           {/* 비중 타입 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-400 mb-2">비중 타입</p>
             <div className="grid grid-cols-2 gap-2">
               {weightTypes.map((type) => (
@@ -131,8 +137,8 @@ export default function StrategyCreatePage() {
                   onClick={() => setWeightTypeId(type.id)}
                   className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                     weightTypeId === type.id
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {type.description}
@@ -142,7 +148,7 @@ export default function StrategyCreatePage() {
           </div>
 
           {/* 투자 비중 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">투자 비중</p>
               <p className="text-sm font-medium">
@@ -161,7 +167,7 @@ export default function StrategyCreatePage() {
           </div>
 
           {/* 손절 비율 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">손절 비율</p>
               <p className="text-sm font-medium text-blue-500">
@@ -180,7 +186,7 @@ export default function StrategyCreatePage() {
           </div>
 
           {/* 익절 비율 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">익절 비율</p>
               <p className="text-sm font-medium text-red-500">
@@ -199,36 +205,34 @@ export default function StrategyCreatePage() {
           </div>
 
           {/* 자동매매 토글 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
-            <div className="flex justify-between items-center px-4 py-3.5">
-              <span className="font-medium">자동매매</span>
-              <button
-                onClick={() => setIsAuto(!isAuto)}
-                className={`w-12 h-7 rounded-full transition-colors ${
-                  isAuto ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+          <div className="flex justify-between items-center px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
+            <span className="font-medium">자동매매</span>
+            <button
+              onClick={() => setIsAuto(!isAuto)}
+              className={`w-12 h-7 rounded-full transition-colors ${
+                isAuto ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  isAuto ? "translate-x-6" : "translate-x-1"
                 }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    isAuto ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
 
           {/* 취소/저장 버튼 */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 p-4">
             <button
               onClick={() => router.back()}
-              className="flex-1 py-3.5 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 rounded-xl font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-medium transition-colors"
             >
               취소
             </button>
             <button
               onClick={handleSave}
               disabled={saving || !strategyId}
-              className="flex-1 py-3.5 bg-blue-500 text-white rounded-xl font-medium shadow-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="flex-1 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
             >
               {saving ? "저장 중..." : "저장"}
             </button>

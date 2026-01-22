@@ -15,6 +15,20 @@ export interface AccountResponse {
   user_strategies: UserStrategyResponse[];
 }
 
+// 계좌 상세 정보
+export interface AccountDetailResponse {
+  id: number;
+  account_number: string;
+  account_name: string;
+  account_type: AccountType;
+  account_balance: string;
+  hts_id: string;
+  app_key: string;
+  app_secret: string;
+  created_at: string;
+  user_strategies: UserStrategyResponse[];
+}
+
 // 전략 기본 정보
 export interface StrategyInfo {
   id: number;

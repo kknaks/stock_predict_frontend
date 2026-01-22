@@ -20,6 +20,7 @@ export default function StrategyDetailPage() {
   const id = Number(params.id);
 
   const [strategy, setStrategy] = useState<UserStrategyResponse | null>(null);
+  const [accountId, setAccountId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -38,19 +39,22 @@ export default function StrategyDetailPage() {
       setError("");
       try {
         const profile = await userService.getProfile();
-        const allStrategies = profile.accounts.flatMap((account) => account.user_strategies);
-        const found = allStrategies.find((s) => s.id === id);
-        if (found) {
-          setStrategy(found);
-          setInvestmentWeight(found.investment_weight);
-          setLsRatio(found.ls_ratio);
-          setTpRatio(found.tp_ratio);
-          setIsAuto(found.is_auto);
-          setIsActive(found.status === "active");
-          setWeightTypeId(found.strategy_weight_type.id);
-        } else {
-          setError("전략을 찾을 수 없습니다");
+        // 전략이 속한 계좌도 함께 찾기
+        for (const account of profile.accounts) {
+          const found = account.user_strategies.find((s) => s.id === id);
+          if (found) {
+            setStrategy(found);
+            setAccountId(account.id);
+            setInvestmentWeight(found.investment_weight);
+            setLsRatio(found.ls_ratio);
+            setTpRatio(found.tp_ratio);
+            setIsAuto(found.is_auto);
+            setIsActive(found.status === "active");
+            setWeightTypeId(found.strategy_weight_type.id);
+            return;
+          }
         }
+        setError("전략을 찾을 수 없습니다");
       } catch (err) {
         setError(err instanceof Error ? err.message : "로딩 실패");
       } finally {
@@ -61,10 +65,14 @@ export default function StrategyDetailPage() {
   }, [id]);
 
   const handleSave = async () => {
+    if (!accountId) {
+      setError("계좌 정보가 없습니다");
+      return;
+    }
     setSaving(true);
     setError("");
     try {
-      await strategyService.update(id, {
+      await strategyService.update(id, accountId, {
         investment_weight: investmentWeight,
         ls_ratio: lsRatio,
         tp_ratio: tpRatio,
@@ -109,9 +117,9 @@ export default function StrategyDetailPage() {
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
       {!loading && strategy && (
-        <div className="space-y-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl overflow-hidden">
           {/* 전략 이름 (읽기 전용) */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-400 mb-1">전략</p>
             <p className="font-semibold text-lg">
               {strategy.strategy_info.description}
@@ -119,7 +127,7 @@ export default function StrategyDetailPage() {
           </div>
 
           {/* 비중 타입 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <p className="text-xs text-gray-400 mb-2">비중 타입</p>
             <div className="grid grid-cols-2 gap-2">
               {WEIGHT_TYPES.map((type) => (
@@ -128,8 +136,8 @@ export default function StrategyDetailPage() {
                   onClick={() => setWeightTypeId(type.id)}
                   className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
                     weightTypeId === type.id
-                      ? "bg-blue-500 text-white"
-                      : "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                      : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
                   }`}
                 >
                   {type.description}
@@ -139,7 +147,7 @@ export default function StrategyDetailPage() {
           </div>
 
           {/* 투자 비중 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">투자 비중</p>
               <p className="text-sm font-medium">{(investmentWeight * 100).toFixed(0)}%</p>
@@ -156,7 +164,7 @@ export default function StrategyDetailPage() {
           </div>
 
           {/* 손절 비율 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">손절 비율</p>
               <p className="text-sm font-medium text-blue-500">{lsRatio.toFixed(1)}%</p>
@@ -173,7 +181,7 @@ export default function StrategyDetailPage() {
           </div>
 
           {/* 익절 비율 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
               <p className="text-xs text-gray-400">익절 비율</p>
               <p className="text-sm font-medium text-red-500">+{(tpRatio * 100).toFixed(0)}%</p>
@@ -189,63 +197,65 @@ export default function StrategyDetailPage() {
             />
           </div>
 
-          {/* 토글들 */}
-          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
-            {/* 자동매매 */}
-            <div className="flex justify-between items-center px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
-              <span className="font-medium">자동매매</span>
-              <button
-                onClick={() => setIsAuto(!isAuto)}
-                className={`w-12 h-7 rounded-full transition-colors ${
-                  isAuto ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+          {/* 자동매매 */}
+          <div className="flex justify-between items-center px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
+            <span className="font-medium">자동매매</span>
+            <button
+              onClick={() => setIsAuto(!isAuto)}
+              className={`w-12 h-7 rounded-full transition-colors ${
+                isAuto ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  isAuto ? "translate-x-6" : "translate-x-1"
                 }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    isAuto ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
-            {/* 활성화 */}
-            <div className="flex justify-between items-center px-4 py-3.5">
-              <span className="font-medium">활성화</span>
-              <button
-                onClick={() => setIsActive(!isActive)}
-                className={`w-12 h-7 rounded-full transition-colors ${
-                  isActive ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+              />
+            </button>
+          </div>
+
+          {/* 활성화 */}
+          <div className="flex justify-between items-center px-4 py-3.5 border-b border-gray-100 dark:border-gray-800">
+            <span className="font-medium">활성화</span>
+            <button
+              onClick={() => setIsActive(!isActive)}
+              className={`w-12 h-7 rounded-full transition-colors ${
+                isActive ? "bg-blue-500" : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  isActive ? "translate-x-6" : "translate-x-1"
                 }`}
-              >
-                <div
-                  className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${
-                    isActive ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
 
           {/* 삭제/저장 버튼 */}
-          <div className="flex gap-3">
+          <div className="flex gap-3 p-4">
             <button
               onClick={async () => {
+                if (!accountId) {
+                  setError("계좌 정보가 없습니다");
+                  return;
+                }
                 if (confirm("정말 삭제하시겠습니까?")) {
                   try {
-                    await strategyService.delete(id);
+                    await strategyService.delete(id, accountId);
                     router.push("/settings");
                   } catch (err) {
                     setError(err instanceof Error ? err.message : "삭제 실패");
                   }
                 }
               }}
-              className="flex-1 py-3.5 bg-white dark:bg-gray-900 text-red-500 rounded-xl font-medium shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              className="flex-1 py-3 bg-red-50 dark:bg-red-900/20 text-red-500 rounded-lg font-medium transition-colors"
             >
               삭제
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 py-3.5 bg-blue-500 text-white rounded-xl font-medium shadow-sm hover:bg-blue-600 transition-colors disabled:opacity-50"
+              className="flex-1 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg font-medium transition-colors disabled:opacity-50"
             >
               {saving ? "저장 중..." : "저장"}
             </button>
