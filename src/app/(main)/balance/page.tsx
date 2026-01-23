@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { balanceService } from "@/services/balance";
 import { TdPositionResponse, AccountPosition, StockPosition } from "@/types/balance";
+import DatePicker from "@/components/common/DatePicker";
 
 type TabType = "all" | "holding" | "sold";
 
@@ -177,12 +178,7 @@ export default function BalancePage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">잔고</h1>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="p-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-700"
-        />
+        <DatePicker value={date} onChange={setDate} />
       </div>
 
       {loading && <p className="text-gray-500">로딩 중...</p>}

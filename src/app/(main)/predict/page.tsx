@@ -5,6 +5,7 @@ import { predictService } from "@/services/predict";
 import { priceSSEService } from "@/services/price";
 import { StrategyPrediction, PredictionItem, PriceUpdate } from "@/types/predict";
 import StockDetailPanel from "@/components/StockDetailPanel";
+import DatePicker from "@/components/common/DatePicker";
 
 export default function PredictPage() {
   const [strategies, setStrategies] = useState<StrategyPrediction[]>([]);
@@ -232,12 +233,7 @@ export default function PredictPage() {
             </span>
           )}
         </div>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="p-2 border rounded-lg text-sm dark:bg-gray-800 dark:border-gray-700"
-        />
+        <DatePicker value={date} onChange={setDate} />
       </div>
 
       {loading && <p className="text-gray-500">로딩 중...</p>}
