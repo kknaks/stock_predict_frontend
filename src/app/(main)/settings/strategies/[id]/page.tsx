@@ -33,6 +33,9 @@ export default function StrategyDetailPage() {
   const [isActive, setIsActive] = useState(true);
   const [weightTypeId, setWeightTypeId] = useState(1);
 
+  // 툴팁 상태
+  const [activeTooltip, setActiveTooltip] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchStrategy = async () => {
       setLoading(true);
@@ -149,7 +152,21 @@ export default function StrategyDetailPage() {
           {/* 투자 비중 */}
           <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
-              <p className="text-xs text-gray-400">투자 비중</p>
+              <div className="flex items-center gap-1.5 relative">
+                <p className="text-xs text-gray-400">투자 비중</p>
+                <button
+                  onClick={() => setActiveTooltip(activeTooltip === 'investment' ? null : 'investment')}
+                  className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs flex items-center justify-center"
+                >
+                  i
+                </button>
+                {activeTooltip === 'investment' && (
+                  <div className="absolute left-0 top-6 z-10 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-lg">
+                    전체 자본 중 투자할 금액
+                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45" />
+                  </div>
+                )}
+              </div>
               <p className="text-sm font-medium">{(investmentWeight * 100).toFixed(0)}%</p>
             </div>
             <input
@@ -166,12 +183,26 @@ export default function StrategyDetailPage() {
           {/* 손절 비율 */}
           <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
-              <p className="text-xs text-gray-400">손절 비율</p>
+              <div className="flex items-center gap-1.5 relative">
+                <p className="text-xs text-gray-400">손절 비율</p>
+                <button
+                  onClick={() => setActiveTooltip(activeTooltip === 'ls' ? null : 'ls')}
+                  className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs flex items-center justify-center"
+                >
+                  i
+                </button>
+                {activeTooltip === 'ls' && (
+                  <div className="absolute left-0 top-6 z-10 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-lg">
+                    시작가 대비 손절 할 비율
+                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45" />
+                  </div>
+                )}
+              </div>
               <p className="text-sm font-medium text-blue-500">{lsRatio.toFixed(1)}%</p>
             </div>
             <input
               type="range"
-              min="-100"
+              min="-30"
               max="0"
               step="1"
               value={lsRatio}
@@ -183,7 +214,21 @@ export default function StrategyDetailPage() {
           {/* 익절 비율 */}
           <div className="px-4 py-4 border-b border-gray-100 dark:border-gray-800">
             <div className="flex justify-between items-center mb-2">
-              <p className="text-xs text-gray-400">익절 비율</p>
+              <div className="flex items-center gap-1.5 relative">
+                <p className="text-xs text-gray-400">익절 비율</p>
+                <button
+                  onClick={() => setActiveTooltip(activeTooltip === 'tp' ? null : 'tp')}
+                  className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs flex items-center justify-center"
+                >
+                  i
+                </button>
+                {activeTooltip === 'tp' && (
+                  <div className="absolute left-0 top-6 z-10 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-lg">
+                    최고가 대비 익절할 비율
+                    <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45" />
+                  </div>
+                )}
+              </div>
               <p className="text-sm font-medium text-red-500">+{(tpRatio * 100).toFixed(0)}%</p>
             </div>
             <input
