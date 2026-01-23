@@ -8,7 +8,7 @@ export default function MainLayout({
 }) {
   return (
     <AuthGuard>
-      <div className="min-h-screen pb-16">
+      <div className="min-h-screen" style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom))' }}>
         {children}
         <BottomNav />
       </div>
