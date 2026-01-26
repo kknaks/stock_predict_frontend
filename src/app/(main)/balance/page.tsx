@@ -74,7 +74,7 @@ export default function BalancePage() {
       case "sold":
         return "매도";
       case "not_purchased":
-        return "실패";
+        return "대기";
       default:
         return status;
     }
@@ -208,7 +208,7 @@ export default function BalancePage() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isSold && selectedAccount) {
+                if (isHolding && selectedAccount) {
                   const params = new URLSearchParams({
                     name: position.stock_name,
                     qty: String(position.holding_quantity || 0),
@@ -221,9 +221,9 @@ export default function BalancePage() {
                   router.push(`/sell/${position.stock_code}?${params.toString()}`);
                 }
               }}
-              disabled={isSold}
+              disabled={!isHolding}
               className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                isSold
+                !isHolding
                   ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
                   : "bg-blue-500 text-white hover:bg-blue-600"
               }`}
