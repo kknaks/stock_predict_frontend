@@ -164,7 +164,9 @@ export default function PredictPage() {
   const renderPredictionItem = (item: PredictionItem) => {
     const currentReturn = calculateReturn(item);
     const isUp = currentReturn >= 0;
-    const displayPrice = item.current_price ?? item.stock_open;
+    const displayPrice = isMarketOpen
+      ? (item.current_price ?? item.stock_open)
+      : (item.actual_close ?? item.stock_open);
     const isUpdated = priceUpdated[item.stock_code];
     const isSelected = selectedStock?.stock_code === item.stock_code;
 
@@ -272,7 +274,7 @@ export default function PredictPage() {
                 <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100 dark:border-gray-800">
                   <div className="flex items-center">
                     <div className="flex-[1.5] min-w-0">종목명</div>
-                    <div className="flex-1 text-right">현재가</div>
+                    <div className="flex-1 text-right">{isMarketOpen ? "현재가" : "종가"}</div>
                     <div className="flex-1 text-right">시작가</div>
                     <div className="flex-1 text-right">등락률</div>
                   </div>
