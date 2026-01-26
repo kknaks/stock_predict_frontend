@@ -140,19 +140,6 @@ export default function PredictPage() {
     return value >= 0 ? "text-red-500" : "text-blue-500";
   };
 
-  const calculateReturn = (item: PredictionItem) => {
-    // 현재가가 있으면 시가 대비 수익률 계산
-    if (item.current_price && item.stock_open > 0) {
-      return ((item.current_price - item.stock_open) / item.stock_open) * 100;
-    }
-    // 실제 수익률이 있으면 사용
-    if (item.actual_return !== null) {
-      return item.actual_return;
-    }
-    // 기대 수익률 사용
-    return item.expected_return;
-  };
-
   const handleStockClick = (item: PredictionItem) => {
     setSelectedStock(item);
   };
@@ -162,11 +149,20 @@ export default function PredictPage() {
   };
 
   const renderPredictionItem = (item: PredictionItem) => {
-    const currentReturn = calculateReturn(item);
-    const isUp = currentReturn >= 0;
+    // 장중: 현재가(없으면 시가), 장중 아님: 종가(없으면 null)
     const displayPrice = isMarketOpen
       ? (item.current_price ?? item.stock_open)
-      : (item.actual_close ?? item.stock_open);
+      : item.actual_close;
+
+    // 장전 상태: 장중 아니고 종가가 없는 경우
+    const isPreMarket = !isMarketOpen && item.actual_close === null;
+
+    // displayPrice 기준 등락률 계산
+    const currentReturn = displayPrice !== null && item.stock_open > 0
+      ? ((displayPrice - item.stock_open) / item.stock_open) * 100
+      : null;
+
+    const isUp = currentReturn !== null ? currentReturn >= 0 : true;
     const isUpdated = priceUpdated[item.stock_code];
     const isSelected = selectedStock?.stock_code === item.stock_code;
 
@@ -191,17 +187,23 @@ export default function PredictPage() {
           <div className="flex-[1.5] min-w-0">
             <span className="font-bold text-base whitespace-nowrap">{formatStockName(item.stock_name)}</span>
           </div>
-          <div className={`flex-1 flex items-center justify-end font-bold ${getReturnColor(currentReturn)}`}>
-            <span className={`px-1 rounded transition-colors duration-300 ${getPriceChangeClass()}`}>
-              {formatPrice(displayPrice)}
-            </span>
-            <span className="ml-0.5 text-[10px]">{isUp ? "▲" : "▼"}</span>
+          <div className={`flex-1 flex items-center justify-end font-bold ${isPreMarket ? "text-gray-400" : getReturnColor(currentReturn)}`}>
+            {isPreMarket ? (
+              <span className="text-sm">장전</span>
+            ) : (
+              <>
+                <span className={`px-1 rounded transition-colors duration-300 ${getPriceChangeClass()}`}>
+                  {formatPrice(displayPrice)}
+                </span>
+                <span className="ml-0.5 text-[10px]">{isUp ? "▲" : "▼"}</span>
+              </>
+            )}
           </div>
           <div className="flex-1 text-right text-gray-600 dark:text-gray-400">
             {formatPrice(item.stock_open)}
           </div>
-          <div className={`flex-1 text-right font-bold ${getReturnColor(currentReturn)}`}>
-            {formatPercent(currentReturn)}
+          <div className={`flex-1 text-right font-bold ${isPreMarket ? "text-gray-400" : getReturnColor(currentReturn)}`}>
+            {isPreMarket ? "-" : formatPercent(currentReturn)}
           </div>
         </div>
 
