@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   IChartApi,
-  ISeriesApi,
   CandlestickData,
   Time,
   ColorType,
+  CandlestickSeries,
 } from "lightweight-charts";
 import { MinuteCandle } from "@/types/predict";
 
@@ -26,7 +26,8 @@ export default function CandleChart({
 }: CandleChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seriesRef = useRef<any>(null);
 
   // 차트 초기화
   useEffect(() => {
@@ -57,7 +58,7 @@ export default function CandleChart({
       autoSize: true,
     });
 
-    const series = chart.addCandlestickSeries({
+    const series = chart.addSeries(CandlestickSeries, {
       upColor: "#ef4444",
       downColor: "#3b82f6",
       borderUpColor: "#ef4444",

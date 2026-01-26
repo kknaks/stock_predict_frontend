@@ -4,10 +4,10 @@ import { useEffect, useRef } from "react";
 import {
   createChart,
   IChartApi,
-  ISeriesApi,
   HistogramData,
   Time,
   ColorType,
+  HistogramSeries,
 } from "lightweight-charts";
 import { MinuteCandle } from "@/types/predict";
 
@@ -18,7 +18,8 @@ interface VolumeChartProps {
 export default function VolumeChart({ candles }: VolumeChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const seriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const seriesRef = useRef<any>(null);
 
   // 차트 초기화
   useEffect(() => {
@@ -49,7 +50,7 @@ export default function VolumeChart({ candles }: VolumeChartProps) {
       autoSize: true,
     });
 
-    const series = chart.addHistogramSeries({
+    const series = chart.addSeries(HistogramSeries, {
       color: "#26a69a",
       priceFormat: {
         type: "volume",
