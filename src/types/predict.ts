@@ -59,12 +59,14 @@ export interface StockMetadata {
 
 // 분봉 캔들 데이터
 export interface MinuteCandle {
-  candle_datetime: string;
+  candle_date: string;
+  candle_time: string;
   open: number;
   high: number;
   low: number;
   close: number;
   volume: number;
+  trade_count?: number;
 }
 
 export interface MinuteCandleResponse {

@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { priceService, priceSSEService } from "@/services/price";
 import { MinuteCandle, PriceUpdate } from "@/types/predict";
-import CandleChart from "@/components/chart/CandleChart";
-import VolumeChart from "@/components/chart/VolumeChart";
+import StockChart from "@/components/chart/StockChart";
 
 type IntervalType = 1 | 10 | 30 | 60;
 
@@ -98,7 +97,7 @@ export default function ChartPage() {
   const intervals: IntervalType[] = [1, 10, 30, 60];
 
   return (
-    <div className="p-4 pb-20 h-[calc(100vh-5rem)] flex flex-col">
+    <div className="p-4 pb-4 flex flex-col" style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom))' }}>
       {/* 페이지 헤더 */}
       <div className="shrink-0 flex items-center gap-2 mb-4">
         <button
@@ -156,8 +155,8 @@ export default function ChartPage() {
         </div>
       </div>
 
-      {/* 차트 영역 - flex-[2] */}
-      <div className="flex-[2] min-h-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden mb-2 flex flex-col">
+      {/* 차트 영역 (캔들 + 거래량 통합) */}
+      <div className="flex-1 min-h-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
         {/* 차트 헤더 */}
         <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between shrink-0">
           <span className="text-xs text-gray-500">차트</span>
@@ -178,7 +177,7 @@ export default function ChartPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 relative">
           {loading && (
             <div className="h-full flex items-center justify-center">
               <p className="text-gray-500">로딩 중...</p>
@@ -189,40 +188,17 @@ export default function ChartPage() {
               <p className="text-red-500">{error}</p>
             </div>
           )}
+          {!loading && !error && candles.length === 0 && (
+            <div className="h-full flex items-center justify-center">
+              <p className="text-gray-500">데이터가 없습니다</p>
+            </div>
+          )}
           {!loading && !error && candles.length > 0 && (
-            <CandleChart
+            <StockChart
               candles={candles}
               targetPrice={targetPrice}
               stopLossPrice={stopLossPrice}
-              currentPrice={currentPrice}
             />
-          )}
-          {!loading && !error && candles.length === 0 && (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-gray-500">차트 데이터가 없습니다</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 거래량 영역 - flex-[1] */}
-      <div className="flex-[1] min-h-0 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden flex flex-col">
-        <div className="px-3 py-2 text-xs text-gray-500 border-b border-gray-200 dark:border-gray-700 shrink-0">
-          거래량
-        </div>
-        <div className="flex-1 min-h-0">
-          {loading && (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-gray-500">로딩 중...</p>
-            </div>
-          )}
-          {!loading && !error && candles.length === 0 && (
-            <div className="h-full flex items-center justify-center">
-              <p className="text-gray-500">거래량 데이터가 없습니다</p>
-            </div>
-          )}
-          {!loading && !error && candles.length > 0 && (
-            <VolumeChart candles={candles} />
           )}
         </div>
       </div>
