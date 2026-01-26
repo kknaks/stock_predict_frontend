@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { balanceService } from "@/services/balance";
 import { TdPositionResponse, AccountPosition, StockPosition } from "@/types/balance";
 import DatePicker from "@/components/common/DatePicker";
@@ -8,6 +9,7 @@ import DatePicker from "@/components/common/DatePicker";
 type TabType = "all" | "holding" | "sold";
 
 export default function BalancePage() {
+  const router = useRouter();
   const [data, setData] = useState<TdPositionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,6 +19,7 @@ export default function BalancePage() {
     const today = new Date();
     return today.toISOString().split("T")[0];
   });
+  const [selectedStock, setSelectedStock] = useState<string | null>(null);
 
   const fetchPosition = async () => {
     setLoading(true);
@@ -113,62 +116,113 @@ export default function BalancePage() {
     const isHolding = position.status === "holding";
     const isNotPurchased = position.status === "not_purchased";
     const showCurrentPrice = isHolding || isNotPurchased;
+    const isSelected = selectedStock === position.stock_code;
+    const isSold = !isHolding && !isNotPurchased;
+
+    const handleClick = () => {
+      setSelectedStock(isSelected ? null : position.stock_code);
+    };
+
+    const isOtherSelected = selectedStock !== null && !isSelected;
 
     return (
       <div
         key={position.stock_code}
-        className="py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0"
+        className={`py-3 border-b border-gray-100 dark:border-gray-800 last:border-b-0 transition-all ${
+          isOtherSelected ? "opacity-40 bg-gray-100 dark:bg-gray-800" : ""
+        }`}
       >
-        {/* 1행: 종목명 | 평가손익 | 평가금액 | 현재가 */}
-        <div className="flex items-center text-sm">
-          <div className="flex-[1.5] min-w-0 flex items-center gap-1">
-            <span className="font-bold whitespace-nowrap">
-              {formatStockName(position.stock_name)}
-            </span>
-            <span className={`text-[10px] px-1 py-0.5 rounded whitespace-nowrap ${getStatusColor(position.status)}`}>
-              {getStatusLabel(position.status)}
-            </span>
-          </div>
-          <div className={`flex-1 text-right ${isNotPurchased ? "text-gray-400" : getProfitColor(position.profit_amount)}`}>
-            {isNotPurchased ? "-" : formatPrice(position.profit_amount)}
-          </div>
-          <div className="flex-1 text-right">
-            {isNotPurchased ? "-" : (isHolding ? formatPrice(position.eval_amount) : formatPrice(position.sell_amount))}
-          </div>
-          <div className={`flex-1 text-right ${isNotPurchased ? "text-gray-500" : getProfitColor(position.profit_rate)}`}>
-            {showCurrentPrice ? formatPrice(position.current_price) : formatPrice(position.sell_price)}
-          </div>
-        </div>
-
-        {/* 2행: 코드 | 수익률 | 매입금액 | 매입단가 */}
-        <div className="flex items-center mt-1 text-sm text-gray-500">
-          <div className="flex-[1.5] min-w-0 flex gap-2">
-            <span>{position.stock_code}</span>
-            {isHolding && (
-              <span className="text-gray-400">
-                {position.holding_quantity}주
+        <div
+          onClick={handleClick}
+          className="cursor-pointer"
+        >
+          {/* 1행: 종목명 | 평가손익 | 평가금액 | 현재가 */}
+          <div className="flex items-center text-sm">
+            <div className="flex-[1.5] min-w-0 flex items-center gap-1">
+              <span className="font-bold whitespace-nowrap">
+                {formatStockName(position.stock_name)}
               </span>
-            )}
+              <span className={`text-[10px] px-1 py-0.5 rounded whitespace-nowrap ${getStatusColor(position.status)}`}>
+                {getStatusLabel(position.status)}
+              </span>
+            </div>
+            <div className={`flex-1 text-right ${isNotPurchased ? "text-gray-400" : getProfitColor(position.profit_amount)}`}>
+              {isNotPurchased ? "-" : formatPrice(position.profit_amount)}
+            </div>
+            <div className="flex-1 text-right">
+              {isNotPurchased ? "-" : (isHolding ? formatPrice(position.eval_amount) : formatPrice(position.sell_amount))}
+            </div>
+            <div className={`flex-1 text-right ${isNotPurchased ? "text-gray-500" : getProfitColor(position.profit_rate)}`}>
+              {showCurrentPrice ? formatPrice(position.current_price) : formatPrice(position.sell_price)}
+            </div>
           </div>
-          <div className={`flex-1 text-right ${getProfitColor(position.profit_rate)}`}>
-            {formatPercent(position.profit_rate)}
+
+          {/* 2행: 코드 | 수익률 | 매입금액 | 매입단가 */}
+          <div className="flex items-center mt-1 text-sm text-gray-500">
+            <div className="flex-[1.5] min-w-0 flex gap-2">
+              <span>{position.stock_code}</span>
+              {isHolding && (
+                <span className="text-gray-400">
+                  {position.holding_quantity}주
+                </span>
+              )}
+            </div>
+            <div className={`flex-1 text-right ${getProfitColor(position.profit_rate)}`}>
+              {formatPercent(position.profit_rate)}
+            </div>
+            <div className="flex-1 text-right">
+              {formatPrice(position.buy_amount)}
+            </div>
+            <div className="flex-1 text-right">
+              {formatPrice(position.buy_price)}
+            </div>
           </div>
-          <div className="flex-1 text-right">
-            {formatPrice(position.buy_amount)}
-          </div>
-          <div className="flex-1 text-right">
-            {formatPrice(position.buy_price)}
+
+          {/* 3행: 목표가/손절가 정보 */}
+          <div className="flex items-center mt-1 text-[10px] text-gray-400">
+            <div className="flex-[1.5] min-w-0">
+              목표 <span className="text-red-400">{formatPrice(position.target_price)}</span>
+              {" / "}
+              손절 <span className="text-blue-400">{formatPrice(position.stop_loss_price)}</span>
+            </div>
           </div>
         </div>
 
-        {/* 3행: 목표가/손절가 정보 */}
-        <div className="flex items-center mt-1 text-[10px] text-gray-400">
-          <div className="flex-[1.5] min-w-0">
-            목표 <span className="text-red-400">{formatPrice(position.target_price)}</span>
-            {" / "}
-            손절 <span className="text-blue-400">{formatPrice(position.stop_loss_price)}</span>
+        {/* 확장 패널: 차트/매도 버튼 */}
+        {isSelected && (
+          <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800 flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const params = new URLSearchParams({
+                  name: position.stock_name,
+                  target: String(position.target_price || ""),
+                  stopLoss: String(position.stop_loss_price || ""),
+                });
+                router.push(`/chart/${position.stock_code}?${params.toString()}`);
+              }}
+              className="flex-1 py-2 px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              차트
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!isSold) {
+                  alert("매도");
+                }
+              }}
+              disabled={isSold}
+              className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
+                isSold
+                  ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                  : "bg-blue-500 text-white hover:bg-blue-600"
+              }`}
+            >
+              매도
+            </button>
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -191,7 +245,10 @@ export default function BalancePage() {
             {data.accounts.map((account) => (
               <button
                 key={account.account_id}
-                onClick={() => setSelectedAccountId(account.account_id)}
+                onClick={() => {
+                  setSelectedAccountId(account.account_id);
+                  setSelectedStock(null);
+                }}
                 className={`pb-3 px-4 text-base font-semibold transition-colors border-b-2 -mb-px ${
                   selectedAccountId === account.account_id
                     ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"

@@ -57,6 +57,24 @@ export interface StockMetadata {
   delist_date: string | null;
 }
 
+// 분봉 캔들 데이터
+export interface MinuteCandle {
+  candle_datetime: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MinuteCandleResponse {
+  stock_code: string;
+  date: string | null;
+  source: "cache" | "database" | "none";
+  count: number;
+  candles: MinuteCandle[];
+}
+
 // 시간봉 캔들 데이터
 export interface HourCandle {
   candle_date: string;

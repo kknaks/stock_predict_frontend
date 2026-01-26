@@ -1,12 +1,12 @@
-import { PriceUpdate, HourCandleResponse } from "@/types/predict";
+import { PriceUpdate, HourCandleResponse, MinuteCandleResponse } from "@/types/predict";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// 시간봉 조회 서비스
+// 가격 조회 서비스
 export const priceService = {
   // 오늘 시간봉 조회 (캐시 우선)
   async getTodayCandles(stockCode: string): Promise<HourCandleResponse> {
-    const response = await fetch(`${API_URL}/api/v1/price/candles/${stockCode}/today`);
+    const response = await fetch(`${API_URL}/api/v1/price/candles/${stockCode}/hours/today`);
     if (!response.ok) throw new Error("Failed to fetch today candles");
     return response.json();
   },
@@ -14,7 +14,7 @@ export const priceService = {
   // 특정 날짜 시간봉 조회 (DB)
   async getCandlesByDate(stockCode: string, date: string): Promise<HourCandleResponse> {
     const response = await fetch(
-      `${API_URL}/api/v1/price/candles/${stockCode}?start_date=${date}&end_date=${date}`
+      `${API_URL}/api/v1/price/candles/${stockCode}/hours?start_date=${date}&end_date=${date}`
     );
     if (!response.ok) throw new Error("Failed to fetch candles by date");
     const data = await response.json();
@@ -26,6 +26,58 @@ export const priceService = {
       count: data.count,
       candles: data.candles,
     };
+  },
+
+  // 오늘 분봉 조회 (캐시 우선)
+  async getTodayMinuteCandles(
+    stockCode: string,
+    minuteInterval: number = 1
+  ): Promise<MinuteCandleResponse> {
+    const response = await fetch(
+      `${API_URL}/api/v1/price/candles/${stockCode}/minutes/today?minute_interval=${minuteInterval}`
+    );
+    if (!response.ok) throw new Error("Failed to fetch today minute candles");
+    return response.json();
+  },
+
+  // 특정 날짜 분봉 조회 (DB)
+  async getMinuteCandlesByDate(
+    stockCode: string,
+    date: string,
+    minuteInterval: number = 1
+  ): Promise<MinuteCandleResponse> {
+    const response = await fetch(
+      `${API_URL}/api/v1/price/candles/${stockCode}/minutes?start_date=${date}&end_date=${date}&minute_interval=${minuteInterval}`
+    );
+    if (!response.ok) throw new Error("Failed to fetch minute candles by date");
+    const data = await response.json();
+    return {
+      stock_code: data.stock_code,
+      date: date,
+      source: "database",
+      count: data.count,
+      candles: data.candles,
+    };
+  },
+
+  // 분봉 조회 (오늘인지 자동 판단)
+  async getMinuteCandles(
+    stockCode: string,
+    date: string,
+    minuteInterval: number = 1
+  ): Promise<MinuteCandleResponse> {
+    const today = new Date().toISOString().split("T")[0];
+    if (date === today) {
+      return this.getTodayMinuteCandles(stockCode, minuteInterval);
+    }
+    return this.getMinuteCandlesByDate(stockCode, date, minuteInterval);
+  },
+
+  // 장 상태 조회
+  async getMarketStatus(): Promise<{ is_open: boolean }> {
+    const response = await fetch(`${API_URL}/api/v1/price/market/status`);
+    if (!response.ok) throw new Error("Failed to fetch market status");
+    return response.json();
   },
 };
 
