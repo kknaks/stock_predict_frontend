@@ -146,3 +146,81 @@ export interface PriceUpdate {
   market_trade_class_code: string;
   vi_standard_price: string;
 }
+
+// 호가 데이터
+export interface AskingPriceUpdate {
+  timestamp: string;
+  stock_code: string;
+  business_hour: string;
+  hour_cls_code: string;
+
+  // 매도호가 1~10
+  askp1: string;
+  askp2: string;
+  askp3: string;
+  askp4: string;
+  askp5: string;
+  askp6: string;
+  askp7: string;
+  askp8: string;
+  askp9: string;
+  askp10: string;
+
+  // 매수호가 1~10
+  bidp1: string;
+  bidp2: string;
+  bidp3: string;
+  bidp4: string;
+  bidp5: string;
+  bidp6: string;
+  bidp7: string;
+  bidp8: string;
+  bidp9: string;
+  bidp10: string;
+
+  // 매도호가잔량 1~10
+  askp_rsqn1: string;
+  askp_rsqn2: string;
+  askp_rsqn3: string;
+  askp_rsqn4: string;
+  askp_rsqn5: string;
+  askp_rsqn6: string;
+  askp_rsqn7: string;
+  askp_rsqn8: string;
+  askp_rsqn9: string;
+  askp_rsqn10: string;
+
+  // 매수호가잔량 1~10
+  bidp_rsqn1: string;
+  bidp_rsqn2: string;
+  bidp_rsqn3: string;
+  bidp_rsqn4: string;
+  bidp_rsqn5: string;
+  bidp_rsqn6: string;
+  bidp_rsqn7: string;
+  bidp_rsqn8: string;
+  bidp_rsqn9: string;
+  bidp_rsqn10: string;
+
+  // 총 잔량
+  total_askp_rsqn: string;
+  total_bidp_rsqn: string;
+  ovtm_total_askp_rsqn: string;
+  ovtm_total_bidp_rsqn: string;
+
+  // 예상체결 정보
+  antc_cnpr: string;
+  antc_cnqn: string;
+  antc_vol: string;
+  antc_cntg_vrss: string;
+  antc_cntg_vrss_sign: string;
+  antc_cntg_prdy_ctrt: string;
+
+  // 기타
+  acml_vol: string;
+  total_askp_rsqn_icdc: string;
+  total_bidp_rsqn_icdc: string;
+  ovtm_total_askp_icdc: string;
+  ovtm_total_bidp_icdc: string;
+  stck_deal_cls_code: string;
+}

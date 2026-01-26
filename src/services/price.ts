@@ -1,4 +1,4 @@
-import { PriceUpdate, HourCandleResponse, MinuteCandleResponse } from "@/types/predict";
+import { PriceUpdate, HourCandleResponse, MinuteCandleResponse, AskingPriceUpdate } from "@/types/predict";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -79,6 +79,18 @@ export const priceService = {
     if (!response.ok) throw new Error("Failed to fetch market status");
     return response.json();
   },
+
+  // 매도용 가격 조회
+  async getSellPrice(stockCode: string, date: string): Promise<{
+    stock_code: string;
+    open_price: number;
+    current_price: number;
+    is_market_open: boolean;
+  }> {
+    const response = await fetch(`${API_URL}/api/v1/price/sell/${stockCode}?date=${date}`);
+    if (!response.ok) throw new Error("Failed to fetch sell price");
+    return response.json();
+  },
 };
 
 export type PriceUpdateCallback = (update: PriceUpdate) => void;
@@ -122,3 +134,46 @@ export class PriceSSEService {
 }
 
 export const priceSSEService = new PriceSSEService();
+
+// 호가 SSE 서비스
+export type AskingPriceUpdateCallback = (update: AskingPriceUpdate) => void;
+
+export class AskingPriceSSEService {
+  private eventSource: EventSource | null = null;
+  private onAskingPriceUpdate: AskingPriceUpdateCallback | null = null;
+
+  connect(stockCodes: string[], onAskingPriceUpdate: AskingPriceUpdateCallback): void {
+    if (stockCodes.length === 0) return;
+
+    this.disconnect();
+    this.onAskingPriceUpdate = onAskingPriceUpdate;
+
+    const codesParam = stockCodes.join(",");
+    const url = `${API_URL}/api/v1/price/asking-price/stream?stock_codes=${codesParam}`;
+
+    this.eventSource = new EventSource(url);
+
+    this.eventSource.addEventListener("asking_price_update", (event) => {
+      try {
+        const data: AskingPriceUpdate = JSON.parse(event.data);
+        this.onAskingPriceUpdate?.(data);
+      } catch (e) {
+        console.error("Failed to parse asking price update:", e);
+      }
+    });
+
+    this.eventSource.onerror = (error) => {
+      console.error("Asking price SSE connection error:", error);
+    };
+  }
+
+  disconnect(): void {
+    if (this.eventSource) {
+      this.eventSource.close();
+      this.eventSource = null;
+    }
+    this.onAskingPriceUpdate = null;
+  }
+}
+
+export const askingPriceSSEService = new AskingPriceSSEService();

@@ -208,8 +208,17 @@ export default function BalancePage() {
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isSold) {
-                  alert("매도");
+                if (!isSold && selectedAccount) {
+                  const params = new URLSearchParams({
+                    name: position.stock_name,
+                    qty: String(position.holding_quantity || 0),
+                    avgPrice: String(position.buy_price || 0),
+                    target: String(position.target_price || 0),
+                    stopLoss: String(position.stop_loss_price || 0),
+                    date: date,
+                    dailyStrategyId: String(selectedAccount.daily_strategy_id),
+                  });
+                  router.push(`/sell/${position.stock_code}?${params.toString()}`);
                 }
               }}
               disabled={isSold}
