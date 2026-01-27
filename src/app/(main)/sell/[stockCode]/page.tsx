@@ -205,7 +205,7 @@ export default function SellPage({
       {/* 호가 | 주문생성 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 호가 */}
-        <div className="flex-[2] border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
+        <div className="flex-1 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
           <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
             <span>호가</span>
             <span>잔량</span>
@@ -227,7 +227,7 @@ export default function SellPage({
             <div className="flex-1 overflow-y-auto text-xs">
               {/* 매도호가 (10 -> 1 순서로 표시, 가격 높은 순) */}
               <div>
-                {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((i) => {
+                {[5, 4, 3, 2, 1].map((i) => {
                   const priceKey = `askp${i}` as keyof AskingPriceUpdate;
                   const qtyKey = `askp_rsqn${i}` as keyof AskingPriceUpdate;
                   const askPrice = Number(askingPrice[priceKey]);
@@ -251,7 +251,7 @@ export default function SellPage({
 
               {/* 매수호가 (1 -> 10 순서로 표시, 가격 높은 순) */}
               <div className="mt-1">
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => {
+                {[1, 2, 3, 4, 5].map((i) => {
                   const priceKey = `bidp${i}` as keyof AskingPriceUpdate;
                   const qtyKey = `bidp_rsqn${i}` as keyof AskingPriceUpdate;
                   const bidPrice = Number(askingPrice[priceKey]);
@@ -277,7 +277,7 @@ export default function SellPage({
         </div>
 
         {/* 주문 생성 */}
-        <div className="flex-[3] p-4 flex flex-col">
+        <div className="flex-1 p-4 flex flex-col">
           <div className="text-sm font-medium mb-2">주문 생성</div>
 
           {/* 보유주식 섹션 */}
