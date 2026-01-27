@@ -315,9 +315,9 @@ export default function SellPage({
               >
                 −
               </button>
-              <div className="flex-1 flex items-center justify-between px-3 min-w-0">
-                <span className="text-gray-500 text-xs whitespace-nowrap">수량</span>
-                <span className="text-xs font-medium whitespace-nowrap">{quantity.toLocaleString()}주</span>
+              <div className="flex-1 flex items-center px-3 min-w-0">
+                <span className="text-gray-500 text-xs whitespace-nowrap w-8">수량</span>
+                <span className="text-xs font-medium whitespace-nowrap ml-auto">{quantity.toLocaleString()}주</span>
               </div>
               <button
                 onClick={() => handleQuantityChange(1)}
@@ -336,9 +336,9 @@ export default function SellPage({
               >
                 −
               </button>
-              <div className="flex-1 flex items-center justify-between px-3 min-w-0">
-                <span className="text-gray-500 text-xs whitespace-nowrap">단가</span>
-                <span className="text-xs font-medium whitespace-nowrap">{orderType === "MARKET" ? "시장가" : `${price.toLocaleString()}원`}</span>
+              <div className="flex-1 flex items-center px-3 min-w-0">
+                <span className="text-gray-500 text-xs whitespace-nowrap w-8">단가</span>
+                <span className="text-xs font-medium whitespace-nowrap ml-auto">{orderType === "MARKET" ? "시장가" : `${price.toLocaleString()}원`}</span>
               </div>
               <button
                 onClick={() => handlePriceChange(1)}
