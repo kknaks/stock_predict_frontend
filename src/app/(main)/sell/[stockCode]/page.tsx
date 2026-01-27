@@ -205,8 +205,8 @@ export default function SellPage({
       {/* 호가 | 주문생성 */}
       <div className="flex flex-1 overflow-hidden">
         {/* 호가 */}
-        <div className="flex-1 border-r border-gray-200 dark:border-gray-800 p-4 flex flex-col">
-          <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+        <div className="flex-1 border-r border-gray-200 dark:border-gray-800 py-4 flex flex-col">
+          <div className="flex items-center justify-between text-sm text-gray-500 mb-2 px-4">
             <span>호가</span>
             <span>잔량</span>
           </div>
@@ -236,7 +236,7 @@ export default function SellPage({
                     <button
                       key={`ask-${i}`}
                       onClick={() => askPrice > 0 && setPrice(askPrice)}
-                      className="w-full flex items-center justify-between py-2 px-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border-b border-blue-100 dark:border-blue-900/30 last:border-b-0"
+                      className="w-full flex items-center justify-between py-2 px-4 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border-b border-blue-100 dark:border-blue-900/30 last:border-b-0"
                     >
                       <span className="text-blue-600 dark:text-blue-400">
                         {askPrice > 0 ? askPrice.toLocaleString() : "-"}
@@ -260,7 +260,7 @@ export default function SellPage({
                     <button
                       key={`bid-${i}`}
                       onClick={() => bidPrice > 0 && setPrice(bidPrice)}
-                      className="w-full flex items-center justify-between py-2 px-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border-b border-red-100 dark:border-red-900/30 last:border-b-0"
+                      className="w-full flex items-center justify-between py-2 px-4 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border-b border-red-100 dark:border-red-900/30 last:border-b-0"
                     >
                       <span className="text-red-600 dark:text-red-400">
                         {bidPrice > 0 ? bidPrice.toLocaleString() : "-"}
