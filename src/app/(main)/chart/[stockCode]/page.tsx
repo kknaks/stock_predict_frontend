@@ -98,7 +98,7 @@ export default function ChartPage() {
   const intervals: IntervalType[] = [1, 10, 30, 60];
 
   return (
-    <div className="p-4 pb-4 flex flex-col" style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom))' }}>
+    <div className="p-4 pb-20 flex flex-col" style={{ height: 'calc(100vh - 64px - env(safe-area-inset-bottom))' }}>
       {/* 페이지 헤더 */}
       <div className="shrink-0 flex items-center gap-2 mb-4">
         <button

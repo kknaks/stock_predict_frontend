@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { historyService } from "@/services/history";
 import { HistoryResponse, AccountHistoryResponse, DailyHistory } from "@/types/history";
+import MonthPicker from "@/components/common/MonthPicker";
 
 type ViewMode = "calendar" | "daily" | "cumulative";
 
@@ -69,29 +70,16 @@ export default function HistoryPage() {
     return value >= 0 ? "text-red-500" : "text-blue-500";
   };
 
-  const getProfitBgColor = (value: number) => {
-    if (value === 0) return "";
-    return value > 0
-      ? "bg-red-100 dark:bg-red-900/30"
-      : "bg-blue-100 dark:bg-blue-900/30";
+  const getProfitBgColor = (value: number, isSelected: boolean = false) => {
+    if (value === 0) return isSelected ? "bg-gray-200 dark:bg-gray-700" : "";
+    if (value > 0) {
+      return isSelected ? "bg-red-200 dark:bg-red-800/50" : "bg-red-100 dark:bg-red-900/30";
+    }
+    return isSelected ? "bg-blue-200 dark:bg-blue-800/50" : "bg-blue-100 dark:bg-blue-900/30";
   };
 
-  const goToPrevMonth = () => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() - 1);
-      return newDate;
-    });
-    setSelectedDay(null);
-    setTooltip(null);
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate((prev) => {
-      const newDate = new Date(prev);
-      newDate.setMonth(newDate.getMonth() + 1);
-      return newDate;
-    });
+  const handleMonthChange = (year: number, month: number) => {
+    setCurrentDate(new Date(year, month - 1, 1));
     setSelectedDay(null);
     setTooltip(null);
   };
@@ -232,7 +220,7 @@ export default function HistoryPage() {
                   onClick={() => hasData && setSelectedDay(day)}
                   className={`h-16 p-1 border border-gray-100 dark:border-gray-800 ${
                     hasData ? "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800" : ""
-                  } ${isSelected ? "ring-2 ring-blue-500" : ""} ${getProfitBgColor(day.profit_rate)}`}
+                  } ${getProfitBgColor(day.profit_rate, isSelected)}`}
                 >
                   <div
                     className={`text-xs ${
@@ -360,7 +348,7 @@ export default function HistoryPage() {
                         onClick={(e) => handleBarClick(e, day, value!)}
                         className={`absolute left-1/2 -translate-x-1/2 w-[6px] cursor-pointer transition-all ${
                           isPositive ? "bg-red-400 hover:bg-red-500" : "bg-blue-400 hover:bg-blue-500"
-                        } ${isSelected ? "ring-2 ring-offset-1 ring-gray-500" : ""}`}
+                        }`}
                         style={{
                           height: barHeight,
                           top: isPositive ? halfHeight - barHeight : halfHeight,
@@ -486,23 +474,11 @@ export default function HistoryPage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">내역</h1>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={goToPrevMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-          >
-            ◀
-          </button>
-          <span className="text-sm font-medium min-w-[100px] text-center">
-            {data ? `${data.year}년 ${data.month}월` : ""}
-          </span>
-          <button
-            onClick={goToNextMonth}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-          >
-            ▶
-          </button>
-        </div>
+        <MonthPicker
+          year={currentDate.getFullYear()}
+          month={currentDate.getMonth() + 1}
+          onChange={handleMonthChange}
+        />
       </div>
 
       {loading && <p className="text-gray-500">로딩 중...</p>}
@@ -599,7 +575,7 @@ export default function HistoryPage() {
             onClick={() => setTooltip(null)}
           />
           <div
-            className="fixed z-50 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg -translate-x-1/2 -translate-y-full"
+            className="fixed z-50 bg-gray-800 text-white text-sm px-3 py-2 rounded-lg shadow-lg -translate-x-1/2 -translate-y-full whitespace-nowrap"
             style={{
               left: tooltip.x,
               top: tooltip.y - 8,
