@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { balanceService } from "@/services/balance";
 import { TdPositionResponse, AccountPosition, StockPosition } from "@/types/balance";
 import DatePicker from "@/components/common/DatePicker";
@@ -10,16 +10,29 @@ type TabType = "all" | "holding" | "sold";
 
 export default function BalancePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // URL에서 초기값 읽기
+  const initialDate = searchParams.get("date") || new Date().toISOString().split("T")[0];
+  const initialAccountId = searchParams.get("accountId") ? Number(searchParams.get("accountId")) : null;
+  const initialTab = (searchParams.get("tab") as TabType) || "all";
+
   const [data, setData] = useState<TdPositionResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>("all");
-  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
-  const [date, setDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split("T")[0];
-  });
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(initialAccountId);
+  const [date, setDate] = useState(initialDate);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
+
+  // URL 업데이트 함수
+  const updateURL = useCallback((newDate: string, newAccountId: number | null, newTab: TabType) => {
+    const params = new URLSearchParams();
+    params.set("date", newDate);
+    if (newAccountId) params.set("accountId", String(newAccountId));
+    params.set("tab", newTab);
+    router.replace(`/balance?${params.toString()}`, { scroll: false });
+  }, [router]);
 
   const fetchPosition = async () => {
     setLoading(true);
@@ -27,9 +40,11 @@ export default function BalancePage() {
     try {
       const response = await balanceService.getPosition(date);
       setData(response);
-      // 첫 번째 계좌 자동 선택
+      // 첫 번째 계좌 자동 선택 (URL에 없을 때만)
       if (response.accounts.length > 0 && !selectedAccountId) {
-        setSelectedAccountId(response.accounts[0].account_id);
+        const firstAccountId = response.accounts[0].account_id;
+        setSelectedAccountId(firstAccountId);
+        updateURL(date, firstAccountId, activeTab);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "데이터 로딩 실패");
@@ -242,7 +257,10 @@ export default function BalancePage() {
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">잔고</h1>
-        <DatePicker value={date} onChange={setDate} />
+        <DatePicker value={date} onChange={(newDate) => {
+          setDate(newDate);
+          updateURL(newDate, selectedAccountId, activeTab);
+        }} />
       </div>
 
       {loading && <p className="text-gray-500">로딩 중...</p>}
@@ -258,6 +276,8 @@ export default function BalancePage() {
                 onClick={() => {
                   setSelectedAccountId(account.account_id);
                   setSelectedStock(null);
+                  setActiveTab("all");
+                  updateURL(date, account.account_id, "all");
                 }}
                 className={`pb-3 px-4 text-base font-semibold transition-colors border-b-2 -mb-px ${
                   selectedAccountId === account.account_id
@@ -331,7 +351,7 @@ export default function BalancePage() {
               {/* 포지션 목록 - 전체/보유/매도완료 탭 */}
               <div className="flex border-t border-b border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={() => setActiveTab("all")}
+                  onClick={() => { setActiveTab("all"); setSelectedStock(null); updateURL(date, selectedAccountId, "all"); }}
                   className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     activeTab === "all"
                       ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
@@ -341,7 +361,7 @@ export default function BalancePage() {
                   전체
                 </button>
                 <button
-                  onClick={() => setActiveTab("holding")}
+                  onClick={() => { setActiveTab("holding"); setSelectedStock(null); updateURL(date, selectedAccountId, "holding"); }}
                   className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     activeTab === "holding"
                       ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
@@ -351,7 +371,7 @@ export default function BalancePage() {
                   보유
                 </button>
                 <button
-                  onClick={() => setActiveTab("sold")}
+                  onClick={() => { setActiveTab("sold"); setSelectedStock(null); updateURL(date, selectedAccountId, "sold"); }}
                   className={`flex-1 py-3 text-sm font-medium transition-colors border-b-2 -mb-px ${
                     activeTab === "sold"
                       ? "border-gray-900 dark:border-white text-gray-900 dark:text-white"
