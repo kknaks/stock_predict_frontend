@@ -17,12 +17,14 @@ interface StockChartProps {
   candles: MinuteCandle[];
   targetPrice: number;
   stopLossPrice: number;
+  buyPrice: number;
 }
 
 export default function StockChart({
   candles,
   targetPrice,
   stopLossPrice,
+  buyPrice,
 }: StockChartProps) {
   const candleContainerRef = useRef<HTMLDivElement>(null);
   const volumeContainerRef = useRef<HTMLDivElement>(null);
@@ -252,6 +254,18 @@ export default function StockChart({
       });
     }
 
+    // 매입가 라인
+    if (buyPrice > 0) {
+      candleSeriesRef.current.createPriceLine({
+        price: buyPrice,
+        color: "#22c55e",
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: "매입",
+      });
+    }
+
     // 손절가 라인
     if (stopLossPrice > 0) {
       candleSeriesRef.current.createPriceLine({
@@ -267,7 +281,7 @@ export default function StockChart({
     // 전체 데이터 표시
     candleChartRef.current?.timeScale().fitContent();
     volumeChartRef.current?.timeScale().fitContent();
-  }, [candles, targetPrice, stopLossPrice]);
+  }, [candles, targetPrice, stopLossPrice, buyPrice]);
 
   const formatNumber = (n: number) => n.toLocaleString();
 

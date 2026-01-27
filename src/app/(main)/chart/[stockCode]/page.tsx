@@ -17,6 +17,7 @@ export default function ChartPage() {
   const stockName = searchParams.get("name") || "";
   const targetPrice = Number(searchParams.get("target") || 0);
   const stopLossPrice = Number(searchParams.get("stopLoss") || 0);
+  const buyPrice = Number(searchParams.get("buyPrice") || 0);
 
   const [candles, setCandles] = useState<MinuteCandle[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
@@ -142,11 +143,15 @@ export default function ChartPage() {
           </span>
         </div>
 
-        {/* 목표가/손절가 */}
+        {/* 목표가/손절가/매입가 */}
         <div className="flex gap-2 mt-2 text-xs">
           <div className="flex-1 py-1.5 px-3 bg-red-50 dark:bg-red-900/20 rounded-lg flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">목표</span>
             <span className="text-red-500 font-medium">{formatPrice(targetPrice)}</span>
+          </div>
+          <div className="flex-1 py-1.5 px-3 bg-green-50 dark:bg-green-900/20 rounded-lg flex justify-between">
+            <span className="text-gray-500 dark:text-gray-400">매입</span>
+            <span className="text-green-500 font-medium">{formatPrice(buyPrice)}</span>
           </div>
           <div className="flex-1 py-1.5 px-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex justify-between">
             <span className="text-gray-500 dark:text-gray-400">손절</span>
@@ -198,6 +203,7 @@ export default function ChartPage() {
               candles={candles}
               targetPrice={targetPrice}
               stopLossPrice={stopLossPrice}
+              buyPrice={buyPrice}
             />
           )}
         </div>

@@ -198,6 +198,7 @@ export default function BalancePage() {
                   name: position.stock_name,
                   target: String(position.target_price || ""),
                   stopLoss: String(position.stop_loss_price || ""),
+                  buyPrice: String(position.buy_price || ""),
                 });
                 router.push(`/chart/${position.stock_code}?${params.toString()}`);
               }}
