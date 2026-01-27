@@ -226,7 +226,7 @@ export default function SellPage({
           ) : (
             <div className="flex-1 overflow-y-auto text-xs">
               {/* 매도호가 (10 -> 1 순서로 표시, 가격 높은 순) */}
-              <div className="space-y-0.5">
+              <div>
                 {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((i) => {
                   const priceKey = `askp${i}` as keyof AskingPriceUpdate;
                   const qtyKey = `askp_rsqn${i}` as keyof AskingPriceUpdate;
@@ -236,7 +236,7 @@ export default function SellPage({
                     <button
                       key={`ask-${i}`}
                       onClick={() => askPrice > 0 && setPrice(askPrice)}
-                      className="w-full flex items-center justify-between py-0.5 px-1 bg-blue-50 dark:bg-blue-900/20 rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                      className="w-full flex items-center justify-between py-2 px-2 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors border-b border-blue-100 dark:border-blue-900/30 last:border-b-0"
                     >
                       <span className="text-blue-600 dark:text-blue-400">
                         {askPrice > 0 ? askPrice.toLocaleString() : "-"}
@@ -250,7 +250,7 @@ export default function SellPage({
               </div>
 
               {/* 매수호가 (1 -> 10 순서로 표시, 가격 높은 순) */}
-              <div className="space-y-0.5 mt-1">
+              <div className="mt-1">
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => {
                   const priceKey = `bidp${i}` as keyof AskingPriceUpdate;
                   const qtyKey = `bidp_rsqn${i}` as keyof AskingPriceUpdate;
@@ -260,7 +260,7 @@ export default function SellPage({
                     <button
                       key={`bid-${i}`}
                       onClick={() => bidPrice > 0 && setPrice(bidPrice)}
-                      className="w-full flex items-center justify-between py-0.5 px-1 bg-red-50 dark:bg-red-900/20 rounded hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                      className="w-full flex items-center justify-between py-2 px-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors border-b border-red-100 dark:border-red-900/30 last:border-b-0"
                     >
                       <span className="text-red-600 dark:text-red-400">
                         {bidPrice > 0 ? bidPrice.toLocaleString() : "-"}
@@ -301,14 +301,14 @@ export default function SellPage({
             <select
               value={orderType}
               onChange={(e) => setOrderType(e.target.value as OrderType)}
-              className="w-full p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm focus:outline-none"
+              className="w-full p-3 bg-gray-100 dark:bg-gray-800 text-sm focus:outline-none"
             >
               <option value="LIMIT">지정가</option>
               <option value="MARKET">시장가</option>
             </select>
 
             {/* 수량 입력 */}
-            <div className="flex items-center mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <div className="flex items-center mt-2 border border-gray-200 dark:border-gray-700 overflow-hidden">
               <button
                 onClick={() => handleQuantityChange(-1)}
                 className="w-10 h-10 shrink-0 flex items-center justify-center text-lg border-r border-gray-200 dark:border-gray-700"
@@ -328,7 +328,7 @@ export default function SellPage({
             </div>
 
             {/* 단가 입력 */}
-            <div className={`flex items-center mt-2 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden ${orderType === "MARKET" ? "opacity-40" : ""}`}>
+            <div className={`flex items-center mt-2 border border-gray-200 dark:border-gray-700 overflow-hidden ${orderType === "MARKET" ? "opacity-40" : ""}`}>
               <button
                 onClick={() => handlePriceChange(-1)}
                 disabled={orderType === "MARKET"}
@@ -353,7 +353,7 @@ export default function SellPage({
             <div className="flex items-center justify-between mt-3">
               <button
                 onClick={() => setQuantity(holdingQty)}
-                className="px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm"
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-800 text-sm"
               >
                 가능
               </button>
@@ -373,7 +373,7 @@ export default function SellPage({
             <button
               onClick={handleSellOrder}
               disabled={submitting || quantity <= 0}
-              className="w-full p-3 bg-blue-500 text-white rounded-lg text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full p-3 bg-blue-500 text-white text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {submitting ? "주문 전송중..." : "매도"}
             </button>
