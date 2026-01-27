@@ -77,13 +77,24 @@ export default function SellPage({
     askingPriceSSEService.connect([stockCode], (update) => {
       if (update.stock_code === stockCode) {
         setAskingPrice(update);
+        // 매수1호가로 현재가 업데이트
+        const bidp1 = Number(update.bidp1);
+        if (bidp1 > 0) {
+          setCurrentPrice(bidp1);
+          if (openPrice) {
+            const change = bidp1 - openPrice;
+            const changeRate = openPrice > 0 ? (change / openPrice) * 100 : 0;
+            setPriceChange(change);
+            setPriceChangeRate(changeRate);
+          }
+        }
       }
     });
 
     return () => {
       askingPriceSSEService.disconnect();
     };
-  }, [stockCode, isMarketOpen]);
+  }, [stockCode, isMarketOpen, openPrice]);
 
   const handleQuantityChange = (delta: number) => {
     setQuantity((prev) => Math.max(0, prev + delta));
