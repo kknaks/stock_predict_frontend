@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { priceService, priceSSEService } from "@/services/price";
 import { MinuteCandle, PriceUpdate } from "@/types/predict";
@@ -23,6 +23,7 @@ export default function ChartPage() {
   const [candles, setCandles] = useState<MinuteCandle[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
   const [openPrice, setOpenPrice] = useState<number | null>(null);
+  const openPriceRef = useRef<number | null>(null);
   const [priceChange, setPriceChange] = useState<number>(0);
   const [priceChangeRate, setPriceChangeRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -53,17 +54,18 @@ export default function ChartPage() {
 
         if (open !== null) {
           setOpenPrice(open);
+          openPriceRef.current = open;
 
-          // 현재가: 오늘+장중이면 마지막 캔들 close (SSE로 업데이트됨), 아니면 close_price
-          if (isViewingToday && marketStatus.is_open && candleResponse.candles.length > 0) {
+          // close_price가 있으면 확정 종가, 없으면 마지막 캔들 close (SSE로 업데이트됨)
+          if (close !== null) {
+            setCurrentPrice(close);
+            setPriceChange(close - open);
+            setPriceChangeRate(((close - open) / open) * 100);
+          } else if (candleResponse.candles.length > 0) {
             const lastCandle = candleResponse.candles[candleResponse.candles.length - 1];
             setCurrentPrice(lastCandle.close);
             setPriceChange(lastCandle.close - open);
             setPriceChangeRate(((lastCandle.close - open) / open) * 100);
-          } else if (close !== null) {
-            setCurrentPrice(close);
-            setPriceChange(close - open);
-            setPriceChangeRate(((close - open) / open) * 100);
           }
         }
       } catch (err) {
@@ -84,12 +86,13 @@ export default function ChartPage() {
     const handlePriceUpdate = (update: PriceUpdate) => {
       if (update.stock_code === stockCode) {
         const newPrice = Number(update.current_price);
-        const open = Number(update.open_price);
+        const open = openPriceRef.current;
         setCurrentPrice(newPrice);
-        setOpenPrice(open);
-        // 시가 대비 등락률 계산
-        setPriceChange(newPrice - open);
-        setPriceChangeRate(open > 0 ? ((newPrice - open) / open) * 100 : 0);
+        // 시가 대비 등락률 계산 (API에서 받은 open_price 사용)
+        if (open !== null && open > 0) {
+          setPriceChange(newPrice - open);
+          setPriceChangeRate(((newPrice - open) / open) * 100);
+        }
       }
     };
 
