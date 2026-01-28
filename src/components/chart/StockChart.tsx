@@ -30,6 +30,7 @@ export default function StockChart({
   const volumeContainerRef = useRef<HTMLDivElement>(null);
   const [selectedData, setSelectedData] = useState<OHLCVData | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  const [volumeTooltip, setVolumeTooltip] = useState<{ time: string; volume: number; x: number; y: number } | null>(null);
   const candleMapRef = useRef<Map<number, OHLCVData>>(new Map());
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const candleChartRef = useRef<any>(null);
@@ -150,6 +151,18 @@ export default function StockChart({
       if (data) {
         setSelectedData(data);
         setTooltipPos({ x: param.point.x, y: param.point.y });
+      }
+    });
+
+    // 볼륨 차트 터치/드래그 시 정보 표시
+    volumeChart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.point) {
+        setVolumeTooltip(null);
+        return;
+      }
+      const data = candleMapRef.current.get(param.time as number);
+      if (data) {
+        setVolumeTooltip({ time: data.time, volume: data.volume, x: param.point.x, y: param.point.y });
       }
     });
 
@@ -329,7 +342,21 @@ export default function StockChart({
       <div className="text-xs text-gray-500 px-2 py-1 shrink-0">거래량</div>
 
       {/* 거래량 차트 영역 */}
-      <div ref={volumeContainerRef} className="flex-[1] min-h-0" />
+      <div ref={volumeContainerRef} className="flex-[1] min-h-0 relative">
+        {/* 거래량 툴팁 */}
+        {volumeTooltip && (
+          <div
+            className="absolute pointer-events-none z-10 bg-gray-800/80 text-white text-[10px] px-1.5 py-0.5 rounded shadow"
+            style={{
+              left: volumeTooltip.x + 8,
+              top: Math.max(2, volumeTooltip.y - 20),
+              transform: volumeTooltip.x > 200 ? 'translateX(-100%)' : 'none',
+            }}
+          >
+            {volumeTooltip.time} {formatNumber(volumeTooltip.volume)}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
