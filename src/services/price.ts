@@ -57,6 +57,8 @@ export const priceService = {
       source: "database",
       count: data.count,
       candles: data.candles,
+      open_price: data.open_price,
+      close_price: data.close_price,
     };
   },
 
