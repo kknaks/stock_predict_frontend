@@ -18,6 +18,7 @@ export default function ChartPage() {
   const targetPrice = Number(searchParams.get("target") || 0);
   const stopLossPrice = Number(searchParams.get("stopLoss") || 0);
   const buyPrice = Number(searchParams.get("buyPrice") || 0);
+  const dateParam = searchParams.get("date") || new Date().toISOString().split("T")[0];
 
   const [candles, setCandles] = useState<MinuteCandle[]>([]);
   const [currentPrice, setCurrentPrice] = useState<number | null>(null);
@@ -34,25 +35,36 @@ export default function ChartPage() {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const today = new Date().toISOString().split("T")[0];
 
         // 병렬로 분봉 데이터와 장 상태 조회
         const [candleResponse, marketStatus] = await Promise.all([
-          priceService.getMinuteCandles(stockCode, today, interval),
+          priceService.getMinuteCandles(stockCode, dateParam, interval),
           priceService.getMarketStatus(),
         ]);
 
         setCandles(candleResponse.candles);
         setIsMarketOpen(marketStatus.is_open);
 
-        // 첫 캔들 시가, 마지막 캔들 종가 설정
-        if (candleResponse.candles.length > 0) {
-          const firstCandle = candleResponse.candles[0];
-          const lastCandle = candleResponse.candles[candleResponse.candles.length - 1];
-          setOpenPrice(firstCandle.open);
-          setCurrentPrice(lastCandle.close);
-          setPriceChange(lastCandle.close - firstCandle.open);
-          setPriceChangeRate(((lastCandle.close - firstCandle.open) / firstCandle.open) * 100);
+        // API 응답의 open_price, close_price 사용
+        const open = candleResponse.open_price;
+        const close = candleResponse.close_price;
+        const today = new Date().toISOString().split("T")[0];
+        const isViewingToday = dateParam === today;
+
+        if (open !== null) {
+          setOpenPrice(open);
+
+          // 현재가: 오늘+장중이면 마지막 캔들 close (SSE로 업데이트됨), 아니면 close_price
+          if (isViewingToday && marketStatus.is_open && candleResponse.candles.length > 0) {
+            const lastCandle = candleResponse.candles[candleResponse.candles.length - 1];
+            setCurrentPrice(lastCandle.close);
+            setPriceChange(lastCandle.close - open);
+            setPriceChangeRate(((lastCandle.close - open) / open) * 100);
+          } else if (close !== null) {
+            setCurrentPrice(close);
+            setPriceChange(close - open);
+            setPriceChangeRate(((close - open) / open) * 100);
+          }
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "데이터 로딩 실패");
@@ -62,18 +74,22 @@ export default function ChartPage() {
     };
 
     fetchData();
-  }, [stockCode, interval]);
+  }, [stockCode, interval, dateParam]);
 
-  // 실시간 현재가 SSE 연결 (장중일 때만)
+  // 실시간 현재가 SSE 연결 (오늘 + 장중일 때만)
+  const isToday = dateParam === new Date().toISOString().split("T")[0];
   useEffect(() => {
-    if (!isMarketOpen) return;
+    if (!isToday || !isMarketOpen) return;
 
     const handlePriceUpdate = (update: PriceUpdate) => {
       if (update.stock_code === stockCode) {
         const newPrice = Number(update.current_price);
+        const open = Number(update.open_price);
         setCurrentPrice(newPrice);
-        setPriceChange(Number(update.price_change));
-        setPriceChangeRate(Number(update.price_change_rate));
+        setOpenPrice(open);
+        // 시가 대비 등락률 계산
+        setPriceChange(newPrice - open);
+        setPriceChangeRate(open > 0 ? ((newPrice - open) / open) * 100 : 0);
       }
     };
 
@@ -82,7 +98,7 @@ export default function ChartPage() {
     return () => {
       priceSSEService.disconnect();
     };
-  }, [stockCode, isMarketOpen]);
+  }, [stockCode, isMarketOpen, isToday]);
 
   const formatPrice = (value: number | null) => {
     if (value === null) return "-";

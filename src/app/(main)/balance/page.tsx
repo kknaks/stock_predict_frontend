@@ -214,6 +214,7 @@ export default function BalancePage() {
                   target: String(position.target_price || ""),
                   stopLoss: String(position.stop_loss_price || ""),
                   buyPrice: String(position.buy_price || ""),
+                  date: date,
                 });
                 router.push(`/chart/${position.stock_code}?${params.toString()}`);
               }}

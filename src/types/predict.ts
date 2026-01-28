@@ -75,6 +75,8 @@ export interface MinuteCandleResponse {
   source: "cache" | "database" | "none";
   count: number;
   candles: MinuteCandle[];
+  open_price: number | null;
+  close_price: number | null;
 }
 
 // 시간봉 캔들 데이터
