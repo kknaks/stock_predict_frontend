@@ -262,6 +262,29 @@ export default function SettingsPage() {
               로그아웃
             </button>
           </section>
+
+          {/* AI 모델 */}
+          <section>
+            <button
+              onClick={() => router.push("/settings/reports")}
+              className="w-full flex items-center justify-between px-4 py-3.5 bg-white dark:bg-gray-900 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              <span className="font-medium">AI 모델</span>
+              <svg
+                className="w-5 h-5 text-gray-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </section>
         </div>
       )}
     </div>
