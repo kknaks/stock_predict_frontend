@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { reportService } from "@/services/report";
 import { ReportDetailResponse } from "@/types/report";
 
@@ -30,53 +32,11 @@ export default function ReportDetailPage() {
     fetch();
   }, [version]);
 
-  const renderMarkdown = (content: string) => {
-    // 이미지 경로에 API_URL prefix 추가
-    const processed = content.replace(
+  const processContent = (content: string) => {
+    return content.replace(
       /!\[([^\]]*)\]\(\/api\/v1\/reports\//g,
       `![$1](${API_URL}/api/v1/reports/`
     );
-
-    return processed.split("\n").map((line, i) => {
-      // 이미지
-      const imgMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)/);
-      if (imgMatch) {
-        return (
-          <img
-            key={i}
-            src={imgMatch[2]}
-            alt={imgMatch[1]}
-            className="max-w-full rounded-lg my-4"
-          />
-        );
-      }
-
-      // 헤더
-      if (line.startsWith("### "))
-        return <h3 key={i} className="text-base font-semibold mt-6 mb-2">{line.slice(4)}</h3>;
-      if (line.startsWith("## "))
-        return <h2 key={i} className="text-lg font-bold mt-8 mb-3">{line.slice(3)}</h2>;
-      if (line.startsWith("# "))
-        return <h1 key={i} className="text-xl font-bold mt-8 mb-4">{line.slice(2)}</h1>;
-
-      // 구분선
-      if (line.match(/^---+$/))
-        return <hr key={i} className="my-6 border-gray-200 dark:border-gray-700" />;
-
-      // 코드블록 (간단 처리)
-      if (line.startsWith("```"))
-        return null;
-
-      // 빈 줄
-      if (line.trim() === "") return <div key={i} className="h-2" />;
-
-      // 리스트
-      if (line.match(/^[-*] /))
-        return <li key={i} className="ml-4 text-sm text-gray-700 dark:text-gray-300">{line.slice(2)}</li>;
-
-      // 일반 텍스트
-      return <p key={i} className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{line}</p>;
-    });
   };
 
   return (
@@ -94,15 +54,17 @@ export default function ReportDetailPage() {
       {error && <p className="text-red-500">{error}</p>}
 
       {!loading && !error && report && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6">
-          <div className="flex items-center gap-2 mb-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-4">
+          <div className="flex items-center gap-2 mb-4">
             <span className="text-sm text-gray-500">상태:</span>
             <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
               {report.status}
             </span>
           </div>
-          <div className="prose dark:prose-invert max-w-none">
-            {renderMarkdown(report.content)}
+          <div className="prose prose-sm dark:prose-invert max-w-none prose-img:rounded-lg prose-img:max-w-full prose-table:text-xs prose-th:px-2 prose-td:px-2">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {processContent(report.content)}
+            </ReactMarkdown>
           </div>
         </div>
       )}

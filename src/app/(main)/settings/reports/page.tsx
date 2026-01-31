@@ -27,13 +27,11 @@ export default function ReportsPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "-";
-    return new Date(dateStr).toLocaleDateString("ko-KR");
-  };
-
-  const formatDuration = (seconds: number | null) => {
-    if (seconds == null) return "-";
-    if (seconds < 60) return `${Math.round(seconds)}초`;
-    return `${Math.round(seconds / 60)}분`;
+    const d = new Date(dateStr);
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}.${mm}.${dd}`;
   };
 
   const getStatusBadge = (status: string) => {
@@ -62,65 +60,71 @@ export default function ReportsPage() {
       {error && <p className="text-red-500">{error}</p>}
 
       {!loading && !error && (
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 dark:border-gray-800 text-gray-500 text-xs">
-                <th className="px-4 py-3 text-left">버전</th>
-                <th className="px-4 py-3 text-left">상태</th>
-                <th className="px-4 py-3 text-right">학습 데이터</th>
-                <th className="px-4 py-3 text-right">샘플 수</th>
-                <th className="px-4 py-3 text-right">학습 시간</th>
-                <th className="px-4 py-3 text-right">생성일</th>
-                <th className="px-4 py-3 text-center">결과</th>
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
+          <table className="w-full text-xs">
+            {/* 두 줄 헤더 */}
+            <thead className="text-gray-500 border-b border-gray-200 dark:border-gray-700">
+              <tr>
+                <th className="px-3 pt-2.5 pb-0.5 text-left">버전</th>
+                <th className="px-3 pt-2.5 pb-0.5 text-right">학습 시작일</th>
+                <th className="px-3 pt-2.5 pb-0.5 text-right">샘플수</th>
+                <th className="px-3 pt-2.5 pb-0.5 text-center">결과</th>
+              </tr>
+              <tr>
+                <th className="px-3 pt-0.5 pb-2.5 text-left">상태</th>
+                <th className="px-3 pt-0.5 pb-2.5 text-right">학습 종료일</th>
+                <th className="px-3 pt-0.5 pb-2.5 text-right">생성일</th>
+                <th className="px-3 pt-0.5 pb-2.5"></th>
               </tr>
             </thead>
-            <tbody>
-              {reports.map((r) => (
-                <tr
-                  key={r.id}
-                  className="border-b border-gray-50 dark:border-gray-800 last:border-0"
-                >
-                  <td className="px-4 py-3 font-medium">{r.version}</td>
-                  <td className="px-4 py-3">
+            {reports.map((r) => (
+              <tbody
+                key={r.id}
+                className="border-b border-gray-100 dark:border-gray-800 last:border-0"
+              >
+                <tr>
+                  <td className="px-3 pt-3 pb-0.5 font-medium">{r.version}</td>
+                  <td className="px-3 pt-3 pb-0.5 text-right text-gray-500">
+                    {formatDate(r.training_data_start)}
+                  </td>
+                  <td className="px-3 pt-3 pb-0.5 text-right text-gray-500">
+                    {r.training_samples?.toLocaleString() ?? "-"}
+                  </td>
+                  <td className="px-3 pt-3 pb-0.5 text-center" rowSpan={2}>
+                    <button
+                      onClick={() => router.push(`/settings/reports/${r.version}`)}
+                      className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                    >
+                      리포트
+                    </button>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="px-3 pt-0.5 pb-3">
                     <span
                       className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusBadge(r.status)}`}
                     >
                       {r.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500">
-                    {r.training_data_start && r.training_data_end
-                      ? `${r.training_data_start} ~ ${r.training_data_end}`
-                      : "-"}
+                  <td className="px-3 pt-0.5 pb-3 text-right text-gray-500">
+                    {formatDate(r.training_data_end)}
                   </td>
-                  <td className="px-4 py-3 text-right text-gray-500">
-                    {r.training_samples?.toLocaleString() ?? "-"}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-500">
-                    {formatDuration(r.training_duration_seconds)}
-                  </td>
-                  <td className="px-4 py-3 text-right text-gray-500">
+                  <td className="px-3 pt-0.5 pb-3 text-right text-gray-500">
                     {formatDate(r.created_at)}
                   </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => router.push(`/settings/reports/${r.version}`)}
-                      className="px-3 py-1 text-xs font-medium text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                    >
-                      리포트
-                    </button>
-                  </td>
                 </tr>
-              ))}
-              {reports.length === 0 && (
+              </tbody>
+            ))}
+            {reports.length === 0 && (
+              <tbody>
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                  <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
                     등록된 모델이 없습니다
                   </td>
                 </tr>
-              )}
-            </tbody>
+              </tbody>
+            )}
           </table>
         </div>
       )}
