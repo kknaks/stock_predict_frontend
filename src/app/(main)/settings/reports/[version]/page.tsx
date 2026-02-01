@@ -61,7 +61,7 @@ export default function ReportDetailPage() {
               {report.status}
             </span>
           </div>
-          <div className="prose prose-sm dark:prose-invert max-w-none prose-img:rounded-lg prose-img:max-w-full prose-table:text-xs prose-th:px-2 prose-td:px-2">
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words prose-img:rounded-lg prose-img:max-w-full prose-table:text-xs prose-th:px-2 prose-th:py-1 prose-td:px-2 prose-td:py-1 prose-table:border-collapse prose-th:border prose-th:border-gray-300 prose-td:border prose-td:border-gray-300 dark:prose-th:border-gray-600 dark:prose-td:border-gray-600 overflow-x-auto">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {processContent(report.content)}
             </ReactMarkdown>
