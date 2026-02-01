@@ -196,20 +196,20 @@ export default function StrategyCreatePage() {
                 </button>
                 {activeTooltip === 'ls' && (
                   <div className="absolute left-0 top-6 z-10 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 w-48 shadow-lg">
-                    시작가 대비 손절 할 비율
+                    최저가 대비 손절할 비율
                     <div className="absolute -top-1 left-4 w-2 h-2 bg-gray-800 rotate-45" />
                   </div>
                 )}
               </div>
               <p className="text-sm font-medium text-blue-500">
-                {lsRatio.toFixed(1)}%
+                -{(lsRatio * 100).toFixed(0)}%
               </p>
             </div>
             <input
               type="range"
-              min="-30"
-              max="0"
-              step="1"
+              min="0"
+              max="1"
+              step="0.01"
               value={lsRatio}
               onChange={(e) => setLsRatio(parseFloat(e.target.value))}
               className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
