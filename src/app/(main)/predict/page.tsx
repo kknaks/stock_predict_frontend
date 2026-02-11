@@ -149,13 +149,13 @@ export default function PredictPage() {
   };
 
   const renderPredictionItem = (item: PredictionItem) => {
-    // 장중: 현재가(없으면 시가), 장중 아님: 종가(없으면 null)
+    // 장중: 현재가(없으면 시가), 장중 아님: 종가 → DB 종가 → null
     const displayPrice = isMarketOpen
       ? (item.current_price ?? item.stock_open)
-      : item.actual_close;
+      : (item.actual_close ?? item.current_price);
 
-    // 장전 상태: 장중 아니고 종가가 없는 경우
-    const isPreMarket = !isMarketOpen && item.actual_close === null;
+    // 장전 상태: 장중 아니고 종가도 DB 종가도 없는 경우
+    const isPreMarket = !isMarketOpen && item.actual_close === null && item.current_price === null;
 
     // displayPrice 기준 등락률 계산
     const currentReturn = displayPrice !== null && item.stock_open > 0

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { balanceService } from "@/services/balance";
 import { TdPositionResponse, AccountPosition, StockPosition } from "@/types/balance";
+import { PriceSSEService } from "@/services/price";
+import { PriceUpdate } from "@/types/predict";
 import DatePicker from "@/components/common/DatePicker";
 
 type TabType = "all" | "holding" | "sold";
@@ -53,9 +55,98 @@ export default function BalancePage() {
     }
   };
 
+  // SSE 실시간 가격 업데이트 (오늘 날짜, 보유 종목만)
+  const priceSSERef = useRef<PriceSSEService | null>(null);
+
   useEffect(() => {
     fetchPosition();
   }, [date]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    if (date !== today || !data) {
+      // 과거 날짜면 SSE 불필요
+      priceSSERef.current?.disconnect();
+      return;
+    }
+
+    // 보유 중인 종목 코드 수집
+    const holdingCodes: string[] = [];
+    for (const account of data.accounts) {
+      for (const pos of account.positions) {
+        if (pos.status === "holding" && !holdingCodes.includes(pos.stock_code)) {
+          holdingCodes.push(pos.stock_code);
+        }
+      }
+    }
+
+    if (holdingCodes.length === 0) return;
+
+    const sseService = new PriceSSEService();
+    priceSSERef.current = sseService;
+
+    sseService.connect(holdingCodes, (update: PriceUpdate) => {
+      const newPrice = Math.round(Number(update.current_price));
+      if (!newPrice || newPrice <= 0) return;
+
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          accounts: prev.accounts.map((account) => {
+            let holdingBuyAmount = 0;
+            let holdingEvalAmount = 0;
+
+            const updatedPositions = account.positions.map((pos) => {
+              if (pos.stock_code === update.stock_code && pos.status === "holding") {
+                const evalAmount = newPrice * pos.holding_quantity;
+                const buyAmount = pos.buy_amount || 0;
+                const profitAmount = buyAmount ? evalAmount - buyAmount : null;
+                const profitRate = buyAmount ? Math.round((profitAmount! / buyAmount) * 10000) / 100 : null;
+
+                const updated = {
+                  ...pos,
+                  current_price: newPrice,
+                  eval_amount: evalAmount,
+                  profit_amount: profitAmount,
+                  profit_rate: profitRate,
+                };
+                if (updated.buy_amount) holdingBuyAmount += updated.buy_amount;
+                holdingEvalAmount += evalAmount;
+                return updated;
+              }
+              if (pos.status === "holding") {
+                if (pos.buy_amount) holdingBuyAmount += pos.buy_amount;
+                if (pos.eval_amount) holdingEvalAmount += pos.eval_amount;
+              }
+              return pos;
+            });
+
+            const holdingProfitAmount = holdingEvalAmount - holdingBuyAmount;
+            const holdingProfitRate = holdingBuyAmount > 0
+              ? Math.round((holdingProfitAmount / holdingBuyAmount) * 10000) / 100
+              : 0;
+
+            return {
+              ...account,
+              positions: updatedPositions,
+              summary: {
+                ...account.summary,
+                holding_buy_amount: holdingBuyAmount,
+                holding_eval_amount: holdingEvalAmount,
+                holding_profit_amount: holdingProfitAmount,
+                holding_profit_rate: holdingProfitRate,
+              },
+            };
+          }),
+        };
+      });
+    });
+
+    return () => {
+      sseService.disconnect();
+    };
+  }, [data?.accounts.length, date]);
 
   // 선택된 계좌 데이터
   const selectedAccount: AccountPosition | undefined = data?.accounts.find(
