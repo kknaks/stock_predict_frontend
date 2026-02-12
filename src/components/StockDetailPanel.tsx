@@ -109,10 +109,10 @@ export default function StockDetailPanel({
     }
   };
 
-  // 시가/고가/저가 대비 현재가 등락률 계산
-  const calcChangeRate = (basePrice: number) => {
-    if (basePrice === 0) return 0;
-    return ((currentPrice - basePrice) / basePrice) * 100;
+  // 시가 대비 등락률 계산
+  const calcChangeFromOpen = (price: number) => {
+    if (openPrice === 0) return 0;
+    return ((price - openPrice) / openPrice) * 100;
   };
 
   const formatPrice = (value: number) => {
@@ -404,22 +404,22 @@ export default function StockDetailPanel({
             <div>
               <div className="text-xs text-gray-500 mb-1">시가</div>
               <div className="font-medium">{formatPrice(openPrice)}</div>
-              <div className={`text-xs ${calcChangeRate(openPrice) >= 0 ? "text-red-500" : "text-blue-500"}`}>
-                {formatPercent(calcChangeRate(openPrice))}
+              <div className={`text-xs ${calcChangeFromOpen(currentPrice) >= 0 ? "text-red-500" : "text-blue-500"}`}>
+                {formatPercent(calcChangeFromOpen(currentPrice))}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">고가</div>
               <div className="font-medium text-red-500">{formatPrice(highPrice)}</div>
-              <div className="text-xs text-red-500">
-                {formatPercent(calcChangeRate(highPrice))}
+              <div className={`text-xs ${calcChangeFromOpen(highPrice) >= 0 ? "text-red-500" : "text-blue-500"}`}>
+                {formatPercent(calcChangeFromOpen(highPrice))}
               </div>
             </div>
             <div>
               <div className="text-xs text-gray-500 mb-1">저가</div>
               <div className="font-medium text-blue-500">{formatPrice(lowPrice)}</div>
-              <div className="text-xs text-blue-500">
-                {formatPercent(calcChangeRate(lowPrice))}
+              <div className={`text-xs ${calcChangeFromOpen(lowPrice) >= 0 ? "text-red-500" : "text-blue-500"}`}>
+                {formatPercent(calcChangeFromOpen(lowPrice))}
               </div>
             </div>
           </div>
